@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { DollarSign, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -91,14 +91,14 @@ export function PlaceBidDialog({
         <DialogHeader>
           <DialogTitle>Place a Bid on Task</DialogTitle>
           <DialogDescription>
-            Submit your proposal for &quot;{taskTitle}&quot;. The task budget is ${taskBudget.toFixed(2)} and is due by {new Date(taskDeadline).toLocaleDateString()}.
+            Submit your proposal for &quot;{taskTitle}&quot;. The task budget is Rs {taskBudget.toFixed(2)} and is due by {new Date(taskDeadline).toLocaleDateString()}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="bid-amount">Your Bid Amount</Label>
             <div className="relative">
-              <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <span className="absolute left-2.5 top-2.5 text-xs font-medium text-muted-foreground">Rs</span>
               <Input
                 id="bid-amount"
                 type="number"
@@ -111,7 +111,7 @@ export function PlaceBidDialog({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Poster budget: ${taskBudget.toFixed(2)}
+              Poster budget: Rs {taskBudget.toFixed(2)}
             </p>
           </div>
 

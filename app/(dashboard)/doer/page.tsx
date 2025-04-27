@@ -472,7 +472,7 @@ export default function DoerDashboard() {
                         <CardContent>
                           <div className="mb-2 flex items-center justify-between">
                             <span className="text-sm font-medium">Your Bid:</span>
-                            <span className="font-bold">${bid.bidAmount.toFixed(2)}</span>
+                            <span className="font-bold">Rs {bid.bidAmount.toFixed(2)}</span>
                           </div>
                           <p className="line-clamp-2 text-sm text-muted-foreground">{bid.content}</p>
                           <div className="mt-4">
@@ -537,7 +537,7 @@ export default function DoerDashboard() {
                         <div>
                           <p className="font-medium">Bid placed</p>
                           <p className="line-clamp-1 text-sm text-muted-foreground">
-                            You bid ${activitySummary.recentBid.bidAmount.toFixed(2)} on {activitySummary.recentBid.assignment.title}
+                            You bid Rs {activitySummary.recentBid.bidAmount.toFixed(2)} on {activitySummary.recentBid.assignment.title}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">{formatTimestamp(activitySummary.recentBid.createdAt)}</p>
                         </div>

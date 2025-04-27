@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     console.log('Signature created');
     
     // Check if NEXT_PUBLIC_APP_URL is available
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fyp-assignment-helper-rfkt.vercel.app';
     console.log('Using app URL:', appUrl);
     
     // Check if payment already exists for this assignment

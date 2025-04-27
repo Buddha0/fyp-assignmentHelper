@@ -68,7 +68,7 @@ export function BidItem({ bid, taskId, taskStatus, onAccept }: BidItemProps) {
             </div>
           </div>
           <div className="text-right">
-            <p className="font-bold text-lg">${bid.price.toFixed(2)}</p>
+            <p className="font-bold text-lg">Rs {bid.price.toFixed(2)}</p>
             <div className="flex items-center justify-end text-muted-foreground text-xs">
               <Clock className="h-3 w-3 mr-1" />
               <span>Delivery: {formatDeliveryTime(bid.deliveryTime)}</span>

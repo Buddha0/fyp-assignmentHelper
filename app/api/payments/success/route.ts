@@ -220,7 +220,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Get the app URL for redirect
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fyp-assignment-helper-rfkt.vercel.app';
     
     // Redirect to a success page
     const redirectUrl = `${appUrl}/poster/tasks/${payment.assignmentId}?payment=success`;
@@ -232,7 +232,7 @@ export async function GET(req: NextRequest) {
     console.error('Error processing payment success:', error);
     
     // Get the app URL for redirect
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fyp-assignment-helper-rfkt.vercel.app';
     
     // Redirect to a general error page
     return NextResponse.redirect(`${appUrl}/payment-error?reason=${encodeURIComponent('An error occurred while processing payment')}`);

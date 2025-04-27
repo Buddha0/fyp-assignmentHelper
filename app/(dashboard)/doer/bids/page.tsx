@@ -398,18 +398,12 @@ function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
               <p>{bid.task.category}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Task Budget</p>
-              <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3" />
-                <p>${bid.task.budget.toFixed(2)}</p>
-              </div>
+              <p className="font-medium">Task Budget</p>
+              <p>Rs {bid.task.budget.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Your Bid</p>
-              <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3" />
-                <p>${bid.bidAmount.toFixed(2)}</p>
-              </div>
+              <p className="font-medium">Your Bid</p>
+              <p>Rs {bid.bidAmount.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Deadline</p>
@@ -497,7 +491,7 @@ function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
                     step={0.01}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Original task budget: ${bid.task.budget.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Original task budget: Rs {bid.task.budget.toFixed(2)}</p>
               </div>
               
               <div className="space-y-2">

@@ -1154,8 +1154,8 @@ export default function TaskDetail() {
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium text-muted-foreground">Budget</p>
                   <div className="flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                    <span className="font-medium">${task.budget.toFixed(2)}</span>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Rs {task.budget.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">

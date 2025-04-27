@@ -69,7 +69,7 @@ export function AcceptBidButton({
           <DialogHeader>
             <DialogTitle>Accept Bid</DialogTitle>
             <DialogDescription>
-              You are about to accept {doerName}'s bid for ${amount.toFixed(2)}. 
+              You are about to accept {doerName}'s bid for Rs {amount.toFixed(2)}. 
               This will assign the task to them and notify them immediately.
             </DialogDescription>
           </DialogHeader>
