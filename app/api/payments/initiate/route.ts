@@ -141,12 +141,15 @@ export async function POST(req: NextRequest) {
         product_code: MERCHANT_CODE,
         product_service_charge: 0,
         product_delivery_charge: 0,
-        success_url: `${appUrl}/api/payments/success`,
-        failure_url: `${appUrl}/api/payments/failure`,
+        success_url: `https://fyp-assignment-helper-rfkt.vercel.app/api/payments/success`,
+        failure_url: `https://fyp-assignment-helper-rfkt.vercel.app/api/payments/failure`,
         signed_field_names: 'total_amount,transaction_uuid,product_code',
         signature,
       };
 
+      console.log('Payment success URL:', formData.success_url);
+      console.log('Payment failure URL:', formData.failure_url);
+      console.log('APP_URL from env:', process.env.NEXT_PUBLIC_APP_URL);
       console.log('Form data prepared, returning success response');
       return NextResponse.json({
         success: true,
