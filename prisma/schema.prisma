@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // uncomment next line if you use Prisma <5.10
+  // directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  POSTER
+  DOER
+  ADMIN
+}
+
+enum AssignmentStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  UNDER_REVIEW
+  COMPLETED
+  CANCELLED
+  IN_DISPUTE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  DISPUTED
+  RELEASED
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED_REFUND
+  RESOLVED_RELEASE
+  CANCELLED
+}
+
+model User {
+  id                 String   @id
+  name               String?
+  email              String?  @unique
+  image              String?
+  role               Role     @default(DOER)
+  bio                String?  @db.Text
+  skills             String?  @db.Text
+  rating             Float?   @default(0)
+  citizenshipPhotos  Json? // Store array of photo URLs
+  verificationStatus String?  @default("pending") // pending, verified, rejected
+  rejectionReason    String?  @db.Text // Stores the reason why verification was rejected
+  accountBalance     Float    @default(0)
+  clerkId            String? // Clerk.dev user ID for auth
+  phoneNumber        String? // Optional: for eSewa account linking
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relationships
+  postedAssignments   Assignment[] @relation("PostedAssignments")
+  acceptedAssignments Assignment[] @relation("AcceptedAssignments")
+  submissions         Submission[]
+  bids                Bid[]
+  reviews             Review[]
+  receivedReviews     Review[]     @relation("ReceivedReviews")
+  messages            Message[]    @relation("SentMessages")
+  receivedMessages    Message[]    @relation("ReceivedMessages")
+
+  // Payment relationships
+  sentPayments     Payment[]         @relation("SentPayments")
+  receivedPayments Payment[]         @relation("ReceivedPayments")
+  disputes         Dispute[]         @relation("DisputeInitiator")
+  resolvedDisputes Dispute[]         @relation("DisputeResolver")
+  sentFollowups    DisputeFollowup[]
+
+  // Support chat relationships
+  supportSessions SupportChatSession[]
+  supportMessages SupportMessage[]
+
+  // Notifications
+  notifications Notification[]
+}
+
+model Assignment {
+  id          String           @id @default(cuid())
+  title       String
+  description String           @db.Text
+  category    String
+  budget      Float
+  deadline    DateTime
+  priority    String
+  attachments Json?
+  additional  String?          @db.Text
+  status      AssignmentStatus @default(OPEN)
+  tags        String[] // Optional: Array of tags for filtering and search
+
+  // Relationships
+  posterId String
+  poster   User   @relation("PostedAssignments", fields: [posterId], references: [id])
+
+  doerId String?
+  doer   User?   @relation("AcceptedAssignments", fields: [doerId], references: [id])
+
+  // Bid related fields
+  acceptedBidId String? // ID of the accepted bid
+
+  submissions Submission[]
+  bids        Bid[]
+  reviews     Review[]
+  messages    Message[]
+  payment     Payment? // One-to-one relation with Payment
+  disputes    Dispute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([posterId])
+  @@index([doerId])
+}
+
+// New Bid model for doer offers before assignment
+model Bid {
+  id        String @id @default(cuid())
+  content   String @db.Text
+  bidAmount Float
+  status    String @default("pending") // pending, accepted, rejected
+
+  // Relationships
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignmentId])
+  @@index([userId])
+}
+
+// Updated Submission model for actual completed work
+model Submission {
+  id          String  @id @default(cuid())
+  content     String  @db.Text
+  attachments Json?
+  status      String  @default("pending") // pending, approved, rejected
+  feedback    String? @db.Text
+
+  // Relationships
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignmentId])
+  @@index([userId])
+}
+
+model Review {
+  id      String  @id @default(cuid())
+  rating  Float
+  comment String? @db.Text
+
+  // Relationships
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  reviewerId String
+  reviewer   User   @relation(fields: [reviewerId], references: [id])
+
+  receiverId String
+  receiver   User   @relation("ReceivedReviews", fields: [receiverId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignmentId])
+  @@index([reviewerId])
+  @@index([receiverId])
+}
+
+model Message {
+  id       String  @id @default(cuid())
+  content  String  @db.Text
+  isRead   Boolean @default(false)
+  fileUrls Json? // Store array of file URLs
+
+  // Relationships
+  assignmentId String?
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  senderId String
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id])
+
+  receiverId String
+  receiver   User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignmentId])
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model Payment {
+  id     String        @id @default(cuid())
+  amount Float
+  status PaymentStatus @default(PENDING)
+
+  // eSewa specific fields
+  esewaTransactionUuid  String? // Transaction UUID for eSewa
+  esewaRefId            String? // Reference ID returned by eSewa
+  esewaVerificationJson Json? // Store full verification response
+  manualReleaseReason   String? @db.Text // Optional: for admin to log reason for manual release
+
+  // Relationships
+  assignmentId String     @unique // One-to-one with Assignment
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  senderId String // Poster
+  sender   User   @relation("SentPayments", fields: [senderId], references: [id])
+
+  receiverId String // Doer
+  receiver   User   @relation("ReceivedPayments", fields: [receiverId], references: [id])
+
+  dispute Dispute? // Optional relation to dispute
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignmentId])
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model Dispute {
+  id               String        @id @default(cuid())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  reason           String
+  evidence         Json? // URLs to evidence files
+  status           DisputeStatus @default(OPEN)
+  resolution       String? // Admin's resolution notes
+  response         String? // Response from the other party
+  responseEvidence Json? // URLs to response evidence files
+  hasResponse      Boolean       @default(false)
+
+  // Relations
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  assignmentId String     @unique
+  payment      Payment    @relation(fields: [paymentId], references: [id])
+  paymentId    String     @unique
+  initiator    User       @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  initiatorId  String
+  resolvedBy   User?      @relation("DisputeResolver", fields: [resolvedById], references: [id])
+  resolvedById String?
+
+  // Add follow-ups relation
+  followups DisputeFollowup[]
+}
+
+model SupportChatSession {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  title           String? // Optional title/subject for the chat
+  status          String           @default("open") // open, closed
+  assignedAdminId String? // Optional: ID of admin assigned to handle this case
+  messages        SupportMessage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([assignedAdminId])
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  senderId  String
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  fileUrls  Json? // For attachments
+  createdAt DateTime @default(now())
+
+  // Relations
+  session SupportChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender  User               @relation(fields: [senderId], references: [id])
+
+  @@index([sessionId])
+  @@index([senderId])
+}
+
+// Notification model for in-app alerts
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  link      String? // Optional: to redirect user to relevant page
+  type      String? // Type of notification (e.g., "new_bid", "task_assigned", "payment", etc.)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Add the DisputeFollowup model if it doesn't exist
+model DisputeFollowup {
+  id        String   @id @default(cuid())
+  message   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dispute   Dispute @relation(fields: [disputeId], references: [id])
+  disputeId String
+  sender    User    @relation(fields: [senderId], references: [id])
+  senderId  String
+
+  // Evidence for follow-up
+  evidence DisputeFollowupEvidence[]
+}
+
+model DisputeFollowupEvidence {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+
+  // Relations
+  followup   DisputeFollowup @relation(fields: [followupId], references: [id], onDelete: Cascade)
+  followupId String
+}
