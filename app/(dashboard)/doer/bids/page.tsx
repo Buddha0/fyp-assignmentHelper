@@ -1,6 +1,6 @@
 "use client"
 
-import { getUserBids, updateBid, withdrawBid } from "@/actions/utility/task-utility"
+import { getUserBids, withdrawBid } from "@/actions/utility/task-utility"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -9,9 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { useUser } from "@clerk/nextjs"
-import { Clock, DollarSign, Loader2, Search } from "lucide-react"
+import { Clock, Loader2, Search } from "lucide-react"
 import Link from "next/link"
 import React, { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -302,10 +301,6 @@ interface BidCardProps {
 function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
   const { user } = useUser();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editedContent, setEditedContent] = useState(bid.bidDescription);
-  const [editedAmount, setEditedAmount] = useState(bid.bidAmount);
-  const [isUpdating, setIsUpdating] = useState(false);
   
   const handleWithdraw = async () => {
     if (!confirm("Are you sure you want to withdraw this bid? This action cannot be undone.")) {
@@ -334,43 +329,6 @@ function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
       toast.error("Failed to withdraw bid");
     } finally {
       setIsWithdrawing(false);
-    }
-  };
-  
-  const handleSaveEdit = async () => {
-    if (!user?.id) {
-      toast.error("You must be logged in to update a bid");
-      return;
-    }
-    
-    if (!editedContent.trim()) {
-      toast.error("Bid description is required");
-      return;
-    }
-    
-    if (!editedAmount || editedAmount <= 0) {
-      toast.error("Please enter a valid bid amount");
-      return;
-    }
-    
-    setIsUpdating(true);
-    try {
-      const result = await updateBid(bid.id, user.id, editedContent, editedAmount);
-      
-      if (result.success) {
-        toast.success(result.message || "Bid updated successfully");
-        setShowEditModal(false);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        toast.error(result.error || "Failed to update bid");
-      }
-    } catch (error) {
-      console.error("Error updating bid:", error);
-      toast.error("Failed to update bid");
-    } finally {
-      setIsUpdating(false);
     }
   };
   
@@ -434,30 +392,21 @@ function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
             <p>Submitted on {formatDate(bid.createdAt)}</p>
             <div className="flex gap-2">
               {bid.status === "pending" && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setShowEditModal(true)}
-                  >
-                    Edit Bid
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    onClick={handleWithdraw}
-                    disabled={isWithdrawing}
-                  >
-                    {isWithdrawing ? (
-                      <>
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        Withdrawing...
-                      </>
-                    ) : (
-                      "Withdraw Bid"
-                    )}
-                  </Button>
-                </>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleWithdraw}
+                  disabled={isWithdrawing}
+                >
+                  {isWithdrawing ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Withdrawing...
+                    </>
+                  ) : (
+                    "Withdraw Bid"
+                  )}
+                </Button>
               )}
               <Button variant="default" size="sm" asChild>
                 <Link href={`/doer/tasks/${bid.task.id}`}>View Details</Link>
@@ -466,61 +415,6 @@ function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
           </div>
         </div>
       </CardContent>
-      
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
-            <CardHeader>
-              <CardTitle>Edit Your Bid</CardTitle>
-              <CardDescription>Make changes to your bid for {bid.task.title}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Bid Amount</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    className="pl-8"
-                    value={editedAmount || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEditedAmount(value === '' ? 0 : parseFloat(value));
-                    }}
-                    min={0}
-                    step={0.01}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Original task budget: Rs {bid.task.budget.toFixed(2)}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Proposal Description</label>
-                <Textarea 
-                  value={editedContent} 
-                  onChange={(e) => setEditedContent(e.target.value)}
-                  rows={5}
-                  placeholder="Describe why you're a good fit for this task"
-                />
-              </div>
-            </CardContent>
-            <div className="flex justify-end gap-2 p-6 pt-0">
-              <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
-              <Button 
-                onClick={handleSaveEdit} 
-                disabled={isUpdating}
-              >
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    Updating...
-                  </>
-                ) : "Save Changes"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
     </Card>
   );
 }

@@ -7,6 +7,15 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { DisputeResponseForm } from "@/components/dispute-response-form"
 import { PaymentModal } from "@/components/payment-modal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -128,6 +137,7 @@ export default function TaskDetails() {
   const [isReleasingPayment, setIsReleasingPayment] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [showEditWarningDialog, setShowEditWarningDialog] = useState(false)
 
   // Initialize the useUploadThing hook
   const { startUpload } = useUploadThing("evidence", {
@@ -493,6 +503,15 @@ export default function TaskDetails() {
     }
   };
 
+  // Add function to handle edit button click
+  const handleEditClick = () => {
+    if (task?.bids && task.bids.length > 0) {
+      setShowEditWarningDialog(true);
+    } else {
+      router.push(`/poster/create-task?edit=${task?.id}`);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout navItems={posterNavItems} userRole="poster" userName={user?.fullName || "User"}>
@@ -561,11 +580,13 @@ export default function TaskDetails() {
           {/* Add edit and delete buttons when task is OPEN */}
           {task.status === "OPEN" && (
             <div className="flex gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/poster/create-task?edit=${task.id}`}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit Task
-                </Link>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleEditClick}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit Task
               </Button>
               <Button 
                 variant="destructive" 
@@ -579,6 +600,21 @@ export default function TaskDetails() {
           )}
         </div>
 
+        {/* Edit Warning Dialog */}
+        <AlertDialog open={showEditWarningDialog} onOpenChange={setShowEditWarningDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unable to Edit Task</AlertDialogTitle>
+              <AlertDialogDescription>
+                This task cannot be edited because one or more bids have already been placed. Editing would be unfair to bidders who based their proposals on the current description.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction>Understood</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        
         {/* Add alert for active disputes */}
         {activeDispute && (
           <Alert variant={disputeDetails?.initiatorId === user?.id ? "default" : "destructive"} className="my-2">

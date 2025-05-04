@@ -1,6 +1,6 @@
 "use client";
 
-import { getTaskDetails, updateSubmissionStatus } from "@/actions/utility/task-utility";
+import { getTaskDetails, updateSubmissionStatus, deleteTask } from "@/actions/utility/task-utility";
 import { getUserId } from "@/actions/utility/user-utilit";
 import ChatInterface from "@/components/chat/ChatInterface";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -120,6 +121,9 @@ export default function TaskDetail() {
   const [task, setTask] = useState<TaskData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEditBlockedDialog, setShowEditBlockedDialog] = useState(false);
+  // const [serverError, setServerError] = useState<string | null>(null);
+  // const [showServerErrorDialog, setShowServerErrorDialog] = useState(false);
 
   // Fetch task details from the database
   useEffect(() => {
@@ -231,13 +235,38 @@ export default function TaskDetail() {
     }
   };
 
-  const handleDeleteTask = () => {
-    // Logic to delete task
-    console.log("Deleting task:", taskId);
-  };
-
-  const handleEditTask = () => {
-    router.push(`/poster/create-task?edit=${taskId}`);
+  const handleDeleteTask = async () => {
+    try {
+      // Show a confirmation dialog using the toast.confirm functionality
+      toast.promise(
+        // Create a promise that resolves when the task is deleted
+        (async () => {
+          // Get the current user ID for verification
+          const userId = await getUserId();
+          
+          // Call the delete task function from task-utility
+          const result = await deleteTask(taskId, userId);
+          
+          // Handle the response
+          if (result.success) {
+            // Navigate back to the tasks page after successful deletion
+            router.push('/poster/tasks');
+            return "Task deleted successfully";
+          } else {
+            // Parse the error from the response
+            throw new Error(result.error || "Failed to delete task");
+          }
+        })(),
+        {
+          loading: 'Deleting task...',
+          success: (message) => message,
+          error: (err) => err.message || "Failed to delete task",
+        }
+      );
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("An error occurred while deleting the task");
+    }
   };
 
   const handleApproveSubmission = async (submissionId: string) => {
@@ -347,6 +376,41 @@ export default function TaskDetail() {
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{task.title}</h1>
           <Badge className={`${getStatusColor(task.status)} text-white ml-2`}>{getStatusLabel(task.status)}</Badge>
         </div>
+
+        {/* Edit blocked dialog */}
+        <Dialog open={showEditBlockedDialog} onOpenChange={setShowEditBlockedDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cannot Edit Task</DialogTitle>
+              <DialogDescription>
+                This task already has {task?.bids.length} bid{task?.bids && task.bids.length !== 1 ? 's' : ''} from doers. 
+                You cannot edit a task once bids have been placed.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditBlockedDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Server error dialog
+        <Dialog open={showServerErrorDialog} onOpenChange={setShowServerErrorDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Error</DialogTitle>
+              <DialogDescription>
+                {serverError || "An error occurred while trying to edit the task."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowServerErrorDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog> */}
 
         <div className="grid gap-6 md:grid-cols-3 w-full">
           <div className="md:col-span-2 space-y-6">
@@ -712,10 +776,19 @@ export default function TaskDetail() {
               <CardFooter className="flex flex-col gap-2">
                 {task.status === "open" && (
                   <>
-                    <Button variant="outline" className="w-full" onClick={handleEditTask}>
-                      <PencilLine className="mr-2 h-4 w-4" />
-                      Edit Task
-                    </Button>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      if (task?.bids && task?.bids.length > 0) {
+                        setShowEditBlockedDialog(true);
+                      } else {
+                        router.push(`/poster/create-task?edit=${taskId}`);
+                      }
+                    }}>
+                      <Button variant="outline" type="submit" className="w-full">
+                        <PencilLine className="mr-2 h-4 w-4" />
+                        Edit Task
+                      </Button>
+                    </form>
                     <Button variant="destructive" className="w-full" onClick={handleDeleteTask}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Task

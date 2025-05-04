@@ -330,10 +330,18 @@ export async function updateTask(
     }
 ) {
     try {
+        // Find the task and include bids to check if any exist
         const task = await prisma.assignment.findUnique({
             where: {
                 id: taskId,
                 posterId: userId,
+            },
+            include: {
+                bids: {
+                    select: {
+                        id: true,
+                    },
+                },
             },
         });
 
@@ -346,6 +354,14 @@ export async function updateTask(
             return { 
                 success: false, 
                 error: "Cannot update a task that is already in progress or completed" 
+            };
+        }
+
+        // Check if there are any bids on the task
+        if (task.bids && task.bids.length > 0) {
+            return {
+                success: false,
+                error: "Cannot update a task that already has bids from doers"
             };
         }
 
@@ -765,79 +781,11 @@ export async function withdrawBid(bidId: string, userId: string) {
 }
 
 export async function updateBid(bidId: string, userId: string, content: string, bidAmount: number) {
-    try {
-        if (!bidId || !userId) {
-            return {
-                success: false,
-                error: "Bid ID and User ID are required"
-            };
-        }
-
-        if (!content || content.trim() === '') {
-            return {
-                success: false,
-                error: "Bid content is required"
-            };
-        }
-
-        if (!bidAmount || isNaN(bidAmount) || bidAmount <= 0) {
-            return {
-                success: false,
-                error: "A valid bid amount is required"
-            };
-        }
-
-        // Find the bid and verify ownership
-        const bid = await prisma.bid.findUnique({
-            where: {
-                id: bidId
-            }
-        });
-
-        if (!bid) {
-            return {
-                success: false,
-                error: "Bid not found"
-            };
-        }
-
-        if (bid.userId !== userId) {
-            return {
-                success: false,
-                error: "You don't have permission to update this bid"
-            };
-        }
-
-        if (bid.status !== "pending") {
-            return {
-                success: false,
-                error: "You can only update pending bids"
-            };
-        }
-
-        // Update the bid
-        const updatedBid = await prisma.bid.update({
-            where: {
-                id: bidId
-            },
-            data: {
-                content,
-                bidAmount
-            }
-        });
-
-        return {
-            success: true,
-            data: updatedBid,
-            message: "Bid updated successfully"
-        };
-    } catch (error) {
-        console.error("Error updating bid:", error);
-        return {
-            success: false,
-            error: "Failed to update bid"
-        };
-    }
+    // Feature has been disabled - return error response
+    return {
+        success: false,
+        error: "Bid editing has been disabled. Once a bid is submitted, it cannot be modified. If needed, you can withdraw the bid and create a new one."
+    };
 }
 
 export async function acceptBid(bidId: string, userId: string) {
