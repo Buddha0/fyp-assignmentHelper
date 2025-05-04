@@ -37,6 +37,7 @@ import Link from "next/link"
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { createDisputeWithAuth } from "@/actions/disputes"
 
 interface TaskData {
   id: string
@@ -471,23 +472,15 @@ export default function TaskDetail() {
       // Get the current user's ID from auth
       const userId = await getUserId();
       
-      // Call the API to create a dispute
-      const response = await fetch('/api/disputes/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          assignmentId: task.id,
-          initiatorId: userId,
-          reason: disputeReason,
-          evidence: disputeEvidence,
-        }),
-      });
+      // Call the server action directly
+      const result = await createDisputeWithAuth(
+        task.id,
+        userId,
+        disputeReason,
+        disputeEvidence
+      );
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success && result.data) {
         // Update the local task status immediately without requiring a refresh
         setTask(prevTask => {
           if (!prevTask) return null;

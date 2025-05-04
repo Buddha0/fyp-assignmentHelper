@@ -30,6 +30,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { createDisputeWithAuth } from "@/actions/disputes"
 
 interface DoerInfo {
   id: string
@@ -366,23 +367,15 @@ export default function TaskDetails() {
     try {
       setIsSubmittingDispute(true);
       
-      // Call the API to create a dispute
-      const response = await fetch('/api/disputes/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          assignmentId: task.id,
-          initiatorId: user.id,
-          reason: disputeReason,
-          evidence: disputeEvidence,
-        }),
-      });
+      // Call the server action directly instead of the API
+      const result = await createDisputeWithAuth(
+        task.id,
+        user.id,
+        disputeReason,
+        disputeEvidence
+      );
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         // Update the local task status immediately without requiring a refresh
         setTask(prevTask => {
           if (!prevTask) return null;
@@ -422,15 +415,15 @@ export default function TaskDetails() {
         }
         
         toast.success("Dispute submitted successfully.");
-        setDisputeReason("");
+        setDisputeReason('');
         setDisputeEvidence([]);
         setActiveTab("details");
       } else {
-        toast.error(result.error || "Failed to submit dispute.");
+        toast.error(result.error || "Failed to submit dispute");
       }
     } catch (error) {
       console.error("Error submitting dispute:", error);
-      toast.error("An unexpected error occurred.");
+      toast.error("An error occurred while submitting your dispute");
     } finally {
       setIsSubmittingDispute(false);
     }

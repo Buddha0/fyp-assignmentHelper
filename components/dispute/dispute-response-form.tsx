@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Paperclip, X } from "lucide-react"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-import { useUploadThing } from "@/lib/uploadthing"
+import { submitDisputeResponseWithAuth } from "@/actions/disputes"
 import { deleteFile } from "@/actions/utility/file-utility"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+import { useUploadThing } from "@/lib/uploadthing"
+import { Loader2, Paperclip, X } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "sonner"
 
 interface DisputeResponseFormProps {
   disputeId: string
@@ -106,25 +107,19 @@ export function DisputeResponseForm({ disputeId, assignmentTitle }: DisputeRespo
       // Format attachments for API
       const formattedAttachments = attachments.map(file => ({
         url: file.url,
-        name: file.name
+        name: file.name,
+        type: "file"
       }))
       
-      // Submit response with evidence
-      const res = await fetch("/api/disputes/respond", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          disputeId,
-          response,
-          evidence: formattedAttachments
-        })
-      })
+      // Submit response with evidence using the server action directly
+      const result = await submitDisputeResponseWithAuth(
+        disputeId,
+        response,
+        formattedAttachments.length > 0 ? formattedAttachments : undefined
+      )
       
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || "Failed to submit response")
+      if (!result.success) {
+        throw new Error(result.error || "Failed to submit response")
       }
       
       toast.success("Your response has been submitted successfully")

@@ -1,8 +1,7 @@
 "use client"
 
-import { addDisputeFollowUp } from "@/actions/disputes"
+import { addDisputeFollowUpWithAuth } from "@/actions/disputes"
 import { deleteFile } from "@/actions/utility/file-utility"
-import { getUserId } from "@/actions/utility/user-utilit"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -105,13 +104,6 @@ export function DisputeFollowupForm({ disputeId }: DisputeFollowupFormProps) {
     try {
       setIsSubmitting(true)
       
-      // Get the current user's ID
-      const userId = await getUserId()
-      
-      if (!userId) {
-        throw new Error("You need to be logged in to send follow-up messages")
-      }
-      
       // Format attachments for API
       const formattedAttachments = attachments.map(file => ({
         url: file.url,
@@ -120,9 +112,8 @@ export function DisputeFollowupForm({ disputeId }: DisputeFollowupFormProps) {
       }))
       
       // Submit follow-up message with evidence using the direct function
-      const result = await addDisputeFollowUp(
+      const result = await addDisputeFollowUpWithAuth(
         disputeId,
-        userId,
         message,
         formattedAttachments.length > 0 ? formattedAttachments : undefined
       )

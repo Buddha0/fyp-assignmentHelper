@@ -6,6 +6,55 @@ import { DisputeStatus } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import { getUserById } from "@/actions/utility/user-utilit";
 
+export async function createDisputeWithAuth(
+  assignmentId: string,
+  initiatorId: string,
+  reason: string,
+  evidence?: { url: string; name: string; type: string }[]
+): Promise<{
+  success: boolean;
+  data?: any;
+  error?: string;
+}> {
+  try {
+    // Authenticate the request
+    const authResult = await auth();
+    const userId = authResult.userId;
+    
+    if (!userId) {
+      return {
+        success: false,
+        error: "Unauthorized"
+      };
+    }
+
+    // Validate the request
+    if (!assignmentId || !initiatorId || !reason) {
+      return {
+        success: false,
+        error: "Missing required fields"
+      };
+    }
+
+    // Ensure the user can only create disputes for themselves
+    if (userId !== initiatorId) {
+      return {
+        success: false,
+        error: "You can only create disputes for yourself"
+      };
+    }
+
+    // Create the dispute
+    return await createDispute(assignmentId, initiatorId, reason, evidence);
+  } catch (error) {
+    console.error("Error creating dispute:", error);
+    return {
+      success: false,
+      error: "An unexpected error occurred"
+    };
+  }
+}
+
 export async function createDispute(
   assignmentId: string,
   initiatorId: string,
@@ -736,11 +785,10 @@ export async function addDisputeFollowUp(
   additionalEvidence?: { url: string; name: string; type: string }[]
 ) {
   try {
-    // First validate the dispute is still open and user is involved
+    // First check if the dispute exists and is still open
     const dispute = await prisma.dispute.findUnique({
       where: {
         id: disputeId,
-        status: "OPEN",
       },
       include: {
         assignment: {
@@ -756,57 +804,45 @@ export async function addDisputeFollowUp(
     if (!dispute) {
       return {
         success: false,
-        error: "Dispute not found or already resolved.",
+        error: "Dispute not found.",
       };
     }
 
-    // Check if user is involved in this dispute 
-    // (either the poster, doer, or an admin)
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
-    });
+    // Check if user is involved in this dispute
+    const isInvolved =
+      userId === dispute.initiatorId ||
+      userId === dispute.assignment.posterId ||
+      userId === dispute.assignment.doerId;
 
-    const isAdmin = user?.role === "ADMIN";
-    const isPoster = userId === dispute.assignment.posterId;
-    const isDoer = userId === dispute.assignment.doerId;
-
-    if (!isAdmin && !isPoster && !isDoer) {
+    if (!isInvolved) {
       return {
         success: false,
-        error: "You are not authorized to add information to this dispute.",
+        error: "You are not authorized to add follow-up messages to this dispute.",
       };
     }
 
-    // Create the follow-up using the DisputeFollowup model
+    // Create a follow-up entry
     const followUp = await prisma.disputeFollowup.create({
       data: {
         message: followUpContent,
+        evidence: additionalEvidence ? {
+          createMany: {
+            data: additionalEvidence.map(evidence => ({
+              url: evidence.url,
+              name: evidence.name,
+              type: evidence.type || 'file'
+            }))
+          }
+        } : undefined,
         dispute: {
           connect: { id: disputeId },
         },
         sender: {
           connect: { id: userId },
         },
-        evidence: additionalEvidence ? {
-          createMany: {
-            data: additionalEvidence.map(evidence => ({
-              name: evidence.name,
-              url: evidence.url,
-            })),
-          },
-        } : undefined,
       },
       include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true,
-          },
-        },
-        evidence: true,
+        sender: true,
       },
     });
 
@@ -818,7 +854,7 @@ export async function addDisputeFollowUp(
     console.error("Error adding dispute follow-up:", error);
     return {
       success: false,
-      error: "Failed to add information to the dispute.",
+      error: "Failed to add follow-up message.",
     };
   }
 }
@@ -855,6 +891,88 @@ export async function getDisputeFollowUps(disputeId: string) {
     return {
       success: false,
       error: "Failed to fetch additional information for this dispute.",
+    };
+  }
+}
+
+// New server action that performs auth for dispute response
+export async function submitDisputeResponseWithAuth(
+  disputeId: string,
+  response: string,
+  evidence?: { url: string; name: string; type: string }[]
+): Promise<{
+  success: boolean;
+  data?: any;
+  error?: string;
+}> {
+  try {
+    // Authenticate the request
+    const authResult = await auth();
+    const userId = authResult.userId;
+    
+    if (!userId) {
+      return {
+        success: false,
+        error: "Unauthorized"
+      };
+    }
+
+    // Validate the request
+    if (!disputeId || !response) {
+      return {
+        success: false,
+        error: "Missing required fields"
+      };
+    }
+
+    // Submit the dispute response
+    return await submitDisputeResponse(disputeId, userId, response, evidence);
+  } catch (error) {
+    console.error("Error responding to dispute:", error);
+    return {
+      success: false,
+      error: "An unexpected error occurred"
+    };
+  }
+}
+
+// New server action that performs auth for dispute followup
+export async function addDisputeFollowUpWithAuth(
+  disputeId: string,
+  message: string,
+  evidence?: { url: string; name: string; type: string }[]
+): Promise<{
+  success: boolean;
+  data?: any;
+  error?: string;
+}> {
+  try {
+    // Authenticate the request
+    const authResult = await auth();
+    const userId = authResult.userId;
+    
+    if (!userId) {
+      return {
+        success: false,
+        error: "Unauthorized"
+      };
+    }
+    
+    // Validate the request
+    if (!disputeId || !message) {
+      return {
+        success: false,
+        error: "Dispute ID and message are required"
+      };
+    }
+    
+    // Submit follow-up message
+    return await addDisputeFollowUp(disputeId, userId, message, evidence);
+  } catch (error) {
+    console.error("Error adding dispute follow-up:", error);
+    return {
+      success: false,
+      error: "An error occurred while adding the follow-up message"
     };
   }
 } 
