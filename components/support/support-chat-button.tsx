@@ -120,8 +120,19 @@ export function SupportChatButton() {
   useEffect(() => {
     if (isOpen) {
       setUnreadCount(0);
+    } else if (user) {
+      // When dialog is closed, fetch the latest unread count
+      // This ensures the badge state is synced with the database
+      const refreshUnreadCount = async () => {
+        const result = await getUnreadSupportMessageCount();
+        if (result.success) {
+          setUnreadCount(result.data);
+        }
+      };
+      
+      refreshUnreadCount();
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   // Handle support button click
   const handleSupportClick = () => {

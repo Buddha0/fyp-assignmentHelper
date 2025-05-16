@@ -768,14 +768,18 @@ export default function TaskDetails() {
                           <div key={bid.id} className="border rounded-lg p-4 space-y-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={bid.user.image || undefined} />
-                                  <AvatarFallback>
-                                    {bid.user.name?.[0] || "D"}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <Link href={`/poster/profile/${bid.user.id}`} className="hover:opacity-80 transition-opacity">
+                                  <Avatar className="h-10 w-10 cursor-pointer">
+                                    <AvatarImage src={bid.user.image || undefined} />
+                                    <AvatarFallback>
+                                      {bid.user.name?.[0] || "D"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </Link>
                                 <div>
-                                  <h3 className="font-medium">{bid.user.name}</h3>
+                                  <Link href={`/poster/profile/${bid.user.id}`} className="hover:underline">
+                                    <p className="font-medium">{bid.user.name}</p>
+                                  </Link>
                                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                                     <span>{bid.user.rating?.toFixed(1) || "No rating"}</span>
@@ -1442,12 +1446,16 @@ export default function TaskDetails() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={task.doerInfo.image || undefined} />
-                      <AvatarFallback>{task.doerInfo.name?.charAt(0) || 'D'}</AvatarFallback>
-                    </Avatar>
+                    <Link href={`/poster/profile/${task.doerInfo.id}`} className="hover:opacity-80 transition-opacity">
+                      <Avatar className="h-10 w-10 cursor-pointer">
+                        <AvatarImage src={task.doerInfo.image || undefined} />
+                        <AvatarFallback>{task.doerInfo.name?.charAt(0) || 'D'}</AvatarFallback>
+                      </Avatar>
+                    </Link>
                     <div>
-                      <p className="font-medium">{task.doerInfo.name}</p>
+                      <Link href={`/poster/profile/${task.doerInfo.id}`} className="hover:underline">
+                        <p className="font-medium">{task.doerInfo.name}</p>
+                      </Link>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                         <span>{task.doerInfo.rating?.toFixed(1) || "No rating"}</span>
@@ -1481,10 +1489,15 @@ export default function TaskDetails() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full" onClick={() => setActiveTab("messages")}>
+                <CardFooter className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setActiveTab("messages")}>
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Message Doer
+                  </Button>
+                  <Button variant="outline" className="flex-1" asChild>
+                    <Link href={`/poster/profile/${task.doerInfo.id}`}>
+                      View Profile
+                    </Link>
                   </Button>
                 </CardFooter>
               </Card>

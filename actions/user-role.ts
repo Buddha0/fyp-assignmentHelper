@@ -5,6 +5,21 @@ import { auth, clerkClient } from "@clerk/nextjs/server"
 import { Role } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 
+// Get user role by ID
+export async function getUserRole(userId: string): Promise<string> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
+    
+    return user?.role || "POSTER"; // Default to POSTER if role not found
+  } catch (error) {
+    console.error("Error fetching user role:", error);
+    return "POSTER"; // Default to POSTER in case of error
+  }
+}
+
 export async function switchUserRole(newRole: string) {
   try {
     // Get the current user

@@ -1166,17 +1166,31 @@ export default function TaskDetail() {
                 <div>
                   <p className="text-sm font-medium mb-2">Client</p>
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={task.poster?.image || undefined} />
-                      <AvatarFallback>{task.poster?.name?.charAt(0) || "U"}</AvatarFallback>
-                    </Avatar>
+                    <Link href={task.poster?.id ? `/doer/profile/${task.poster.id}` : "#"} className={task.poster?.id ? "hover:opacity-80 transition-opacity" : ""}>
+                      <Avatar className="h-8 w-8 cursor-pointer">
+                        <AvatarImage src={task.poster?.image || undefined} />
+                        <AvatarFallback>{task.poster?.name?.charAt(0) || "U"}</AvatarFallback>
+                      </Avatar>
+                    </Link>
                     <div>
-                      <p className="font-medium">{task.poster?.name || "Anonymous"}</p>
+                      <Link href={task.poster?.id ? `/doer/profile/${task.poster.id}` : "#"} className={task.poster?.id ? "hover:underline" : ""}>
+                        <p className="font-medium">{task.poster?.name || "Anonymous"}</p>
+                      </Link>
                       <p className="text-xs text-muted-foreground">
                         Member since {new Date(task.poster?.memberSince || new Date()).getFullYear()}
                       </p>
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    asChild
+                  >
+                    <Link href={task.poster?.id ? `/doer/profile/${task.poster.id}` : "#"}>
+                      View Profile
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
               <CardFooter className="flex gap-2 flex-col">

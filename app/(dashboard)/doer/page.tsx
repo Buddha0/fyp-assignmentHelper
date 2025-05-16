@@ -6,6 +6,7 @@ import {
   getRecentBids,
   getUserActivitySummary,
 } from "@/actions/doer-dashboard"
+import { getDoerEarningsSummary } from "@/actions/doer-earnings"
 import { getUserStats } from "@/actions/doer-stats"
 import { getCurrentUser } from "@/actions/get-current-user"
 import { doerNavItems } from "@/app/(dashboard)/navigation-config"
@@ -24,9 +25,9 @@ import {
   Briefcase,
   CheckCircle,
   Clock,
+  DollarSign,
   MessageSquare,
-  Search,
-  ThumbsUp
+  Search
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -97,7 +98,7 @@ interface ActivitySummary {
 interface UserStats {
   activeTasks: number
   completedTasks: number
-  successRate: number
+  totalEarnings: number
   unreadMessages: number
 }
 
@@ -154,7 +155,7 @@ export default function DoerDashboard() {
   const [userStats, setUserStats] = useState<UserStats>({
     activeTasks: 0,
     completedTasks: 0,
-    successRate: 0,
+    totalEarnings: 0,
     unreadMessages: 0
   })
   const [loading, setLoading] = useState(true)
@@ -174,13 +175,15 @@ export default function DoerDashboard() {
             availableTasksData,
             recentBidsData,
             activitySummaryData,
-            userStatsData
+            userStatsData,
+            earningsSummary
           ] = await Promise.all([
             getActiveTasks(user.id),
             getAvailableTasks(),
             getRecentBids(user.id),
             getUserActivitySummary(user.id),
-            getUserStats(user.id)
+            getUserStats(user.id),
+            getDoerEarningsSummary(user.id)
           ])
           
           // Transform active tasks data
@@ -254,11 +257,13 @@ export default function DoerDashboard() {
           setAvailableTasks(mappedAvailableTasks)
           setRecentBids(mappedBids)
           setActivitySummary(mappedActivitySummary)
-          setUserStats(userStatsData || {
-            activeTasks: 0,
-            completedTasks: 0,
-            successRate: 0,
-            unreadMessages: 0
+          setUserStats({
+            ...(userStatsData || {
+              activeTasks: 0,
+              completedTasks: 0,
+              unreadMessages: 0
+            }),
+            totalEarnings: earningsSummary?.totalEarnings || 0
           })
         } catch (error) {
           console.error("Error fetching user data:", error)
@@ -390,10 +395,10 @@ export default function DoerDashboard() {
                 trend={{ value: 0, isPositive: true }}
               />
               <StatsCard
-                title="Success Rate"
-                value={`${userStats.successRate}%`}
-                description="Task completion rate"
-                icon={ThumbsUp}
+                title="Total Earnings"
+                value={`Rs ${userStats.totalEarnings.toFixed(2)}`}
+                description="Money earned from completed tasks"
+                icon={DollarSign}
                 trend={{ value: 0, isPositive: true }}
               />
               <StatsCard 

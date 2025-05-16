@@ -1,4 +1,4 @@
-import { AlertTriangle, Briefcase, ClipboardList, FilePlus, Gavel, Home, LayoutDashboard, ListChecks, ListFilter, MessageSquare, ShieldCheck, Users } from "lucide-react";
+import { AlertTriangle, Briefcase, ClipboardList, FilePlus, Gavel, Home, LayoutDashboard, ListChecks, ListFilter, MessageSquare, ShieldCheck, Users, DollarSign, UserCircle } from "lucide-react";
 
 // Navigation items for Poster role
 export const posterNavItems = [
@@ -16,6 +16,11 @@ export const posterNavItems = [
     href: "/poster/create-task",
     label: "Create Task",
     icon: FilePlus,
+  },
+  {
+    href: "/poster/profile",
+    label: "My Profile",
+    icon: UserCircle,
   },
   {
     href: "/poster/disputes",
@@ -50,6 +55,16 @@ export const doerNavItems = [
     href: "/doer/bids",
     label: "My Bids",
     icon: Briefcase,
+  },
+  {
+    href: "/doer/earnings",
+    label: "My Earnings",
+    icon: DollarSign,
+  },
+  {
+    href: "/doer/profile",
+    label: "My Profile",
+    icon: UserCircle,
   },
   {
     href: "/doer/disputes",

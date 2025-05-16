@@ -22,20 +22,6 @@ export async function getUserStats(userId: string) {
       }
     })
     
-    // Calculate success rate (completed tasks / total assigned tasks)
-    const totalAssignedTasks = await prisma.assignment.count({
-      where: {
-        doerId: userId,
-        status: {
-          in: ['ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW', 'COMPLETED']
-        }
-      }
-    })
-    
-    const successRate = totalAssignedTasks > 0 
-      ? Math.round((completedTasks / totalAssignedTasks) * 100) 
-      : 100
-    
     // Get unread messages count
     const unreadMessages = await prisma.message.count({
       where: {
@@ -47,7 +33,6 @@ export async function getUserStats(userId: string) {
     return {
       activeTasks,
       completedTasks,
-      successRate,
       unreadMessages
     }
   } catch (error) {
@@ -55,7 +40,6 @@ export async function getUserStats(userId: string) {
     return {
       activeTasks: 0,
       completedTasks: 0,
-      successRate: 0,
       unreadMessages: 0
     }
   }

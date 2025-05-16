@@ -343,3 +343,4 @@ model DisputeFollowupEvidence {
   followup   DisputeFollowup @relation(fields: [followupId], references: [id], onDelete: Cascade)
   followupId String
 }
+ 

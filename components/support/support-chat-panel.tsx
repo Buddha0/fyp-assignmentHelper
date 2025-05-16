@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SendIcon, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getUserSupportChat, sendSupportMessage } from "@/actions/support-chat";
+import { getUserSupportChat, sendSupportMessage, markMessagesAsRead } from "@/actions/support-chat";
 import { useUser } from "@clerk/nextjs";
 import { pusherClient } from "@/lib/pusher-client";
 import { EVENT_TYPES, getUserChannel } from "@/lib/pusher";
@@ -57,6 +57,16 @@ export function SupportChatPanel() {
             }
           }));
           setMessages(formattedMessages);
+          
+          // Mark all unread messages as read
+          const unreadMessageIds = result.data.messages
+            .filter((msg: any) => !msg.isRead && msg.senderId !== user.id)
+            .map((msg: any) => msg.id);
+            
+          if (unreadMessageIds.length > 0) {
+            await markMessagesAsRead(unreadMessageIds);
+          }
+          
         } else {
           console.error("Failed to load chat history:", result.error);
         }
@@ -74,6 +84,11 @@ export function SupportChatPanel() {
     channel.bind(EVENT_TYPES.NEW_SUPPORT_MESSAGE, (newMessage: SupportMessage) => {
       console.log("New message received via Pusher:", newMessage);
       setMessages(prev => [...prev, newMessage]);
+      
+      // Mark new message as read immediately if the chat is open
+      if (newMessage.id && !newMessage.isFromUser) {
+        markMessagesAsRead([newMessage.id]);
+      }
     });
     
     return () => {

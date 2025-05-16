@@ -27,10 +27,11 @@ interface BidItemProps {
   };
   taskId: string;
   taskStatus: string;
+  userRole?: "poster" | "doer";
   onAccept?: () => void;
 }
 
-export function BidItem({ bid, taskId, taskStatus, onAccept }: BidItemProps) {
+export function BidItem({ bid, taskId, taskStatus, userRole = "poster", onAccept }: BidItemProps) {
   const [messageExpanded, setMessageExpanded] = useState(false);
   const isTaskAssigned = taskStatus === "ASSIGNED" || taskStatus === "IN_PROGRESS" || taskStatus === "COMPLETED";
   
@@ -40,17 +41,26 @@ export function BidItem({ bid, taskId, taskStatus, onAccept }: BidItemProps) {
     return `${days} days`;
   };
   
+  // Determine the correct profile path based on user role
+  const profilePath = userRole === "poster" 
+    ? `/poster/profile/${bid.doer.id}` 
+    : `/doer/profile/${bid.doer.id}`;
+  
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={bid.doer.image || ""} alt={bid.doer.name} />
-              <AvatarFallback>{bid.doer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <Link href={profilePath} className="hover:opacity-80 transition-opacity">
+              <Avatar className="h-10 w-10 cursor-pointer">
+                <AvatarImage src={bid.doer.image || ""} alt={bid.doer.name} />
+                <AvatarFallback>{bid.doer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+            </Link>
             <div>
-              <CardTitle className="text-base">{bid.doer.name}</CardTitle>
+              <Link href={profilePath} className="hover:underline">
+                <CardTitle className="text-base">{bid.doer.name}</CardTitle>
+              </Link>
               <CardDescription className="flex items-center gap-1">
                 {bid.doer.rating && (
                   <div className="flex items-center">
@@ -97,12 +107,19 @@ export function BidItem({ bid, taskId, taskStatus, onAccept }: BidItemProps) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between pt-0">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/dashboard/messages/${taskId}/${bid.doer.id}`}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Message
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/${userRole}/messages/${taskId}/${bid.doer.id}`}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Message
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={profilePath}>
+              View Profile
+            </Link>
+          </Button>
+        </div>
         
         {!isTaskAssigned && (
           <AcceptBidButton 
