@@ -100,13 +100,7 @@ export default function TaskDetail() {
   const params = useParams()
   const taskId = params.id as string
   
-  console.log("Task ID from params:", taskId, "Params object:", params);
-  
-  // Debug the task ID format
-  if (taskId) {
-    console.log("Task ID length:", taskId.length);
-    console.log("Task ID characters:", [...taskId].map(c => `${c} (${c.charCodeAt(0)})`).join(', '));
-  }
+    
 
   const [activeTab, setActiveTab] = useState("details")
   const [submissionMessage, setSubmissionMessage] = useState("")
@@ -152,13 +146,11 @@ export default function TaskDetail() {
       setUploadProgress(0); // Reset progress on error
     },
     onUploadProgress: (progress) => {
-      console.log("Upload progress:", progress);
-      // Store the progress as a single number value
+            // Store the progress as a single number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
     onUploadBegin: () => {
-      console.log("Upload started");
-    },
+          },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
   });
@@ -185,13 +177,11 @@ export default function TaskDetail() {
       setSubmissionUploadProgress(0); // Reset progress on error
     },
     onUploadProgress: (progress) => {
-      console.log("Submission upload progress:", progress);
-      // Store the progress as a single number value
+            // Store the progress as a single number value
       setSubmissionUploadProgress(typeof progress === 'number' ? progress : 0);
     },
     onUploadBegin: () => {
-      console.log("Submission upload started");
-    },
+          },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
   });
@@ -217,12 +207,10 @@ export default function TaskDetail() {
         setIsLoading(true);
         setError(null);
         
-        console.log("Fetching task details for ID:", taskId);
-        
+                
         // Use our direct fetch function which bypasses access control
         const directResult = await fetchTaskDirectly(taskId);
-        console.log("Direct task fetch result:", directResult);
-        
+                
         if (directResult.success && directResult.data) {
           const taskData = directResult.data;
           setTask(taskData);
@@ -251,15 +239,13 @@ export default function TaskDetail() {
   useEffect(() => {
     if (!taskId) return;
     
-    console.log("Setting up Pusher subscription for task updates:", taskId);
-    
+        
     // Subscribe to the task channel
     const channel = pusherClient.subscribe(getTaskChannel(taskId));
     
     // Listen for task update events
     channel.bind(EVENT_TYPES.TASK_UPDATED, (data: any) => {
-      console.log("Task update received:", data);
-      
+            
       if (data.task && data.task.id === taskId) {
         // Update the task state with the updated task data
         setTask(prevTask => {
@@ -874,7 +860,7 @@ export default function TaskDetail() {
                             Upload any relevant files for your submission (max 5 files, 10MB each)
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Allowed files: .pdf, .doc, .docx, .jpg, .jpeg, .png, .zip
+                            Allowed files: .pdf,  .jpg, .jpeg, .png, .zip
                           </p>
                         </div>
                         <Button 
@@ -1063,7 +1049,7 @@ export default function TaskDetail() {
                               Upload any relevant files as evidence (max 5 files, 10MB each)
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Allowed files: .pdf, .doc, .docx, .jpg, .jpeg, .png, .zip
+                              Allowed files: .pdf,  .jpg, .jpeg, .png, .zip
                             </p>
                             
                             {disputeEvidence.length > 0 && (
@@ -1147,7 +1133,7 @@ export default function TaskDetail() {
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium text-muted-foreground">Budget</p>
                   <div className="flex items-center">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+
                     <span className="font-medium">Rs {task.budget.toFixed(2)}</span>
                   </div>
                 </div>
@@ -1242,11 +1228,11 @@ export default function TaskDetail() {
                   <div className="flex justify-between items-center">
                     <p className="text-sm font-medium text-muted-foreground">Bid Amount</p>
                     <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                      <span className="font-medium">${task.bid?.amount?.toFixed(2) || '0.00'}</span>
+
+                      <span className="font-medium">Rs.{task.bid?.amount?.toFixed(2) || '0.00'}</span>
                     </div>
                   </div>
-                  {task.bid?.timeframe && (
+                  {/* {task.bid?.timeframe && (
                     <div className="flex justify-between items-center">
                       <p className="text-sm font-medium text-muted-foreground">Timeframe</p>
                       <div className="flex items-center">
@@ -1254,7 +1240,7 @@ export default function TaskDetail() {
                         <span>{task.bid.timeframe}</span>
                       </div>
                     </div>
-                  )}
+                  )} */}
                   <div className="pt-2">
                     <p className="text-sm font-medium mb-1">Bid Message</p>
                     <p className="text-sm">{task.bid?.message || ''}</p>

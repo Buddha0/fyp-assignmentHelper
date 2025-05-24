@@ -37,6 +37,7 @@ export const EVENT_TYPES = {
   BID_REJECTED: 'bid-rejected',
   TASK_UPDATED: 'task-updated',
   NEW_NOTIFICATION: 'new-notification',
+  URGENT_NOTIFICATION: 'urgent-notification',
   SUBMISSION_STATUS_UPDATED: 'submission-status-updated',
   NEW_SUPPORT_MESSAGE: 'new-support-message',
 };

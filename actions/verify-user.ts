@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/db"
 import { auth } from "@clerk/nextjs/server"
+import { createNotification } from "./notifications"
 
 type VerificationStatus = "verified" | "rejected" | "pending"
 
@@ -63,36 +64,35 @@ export async function verifyUser({ userId, status, rejectionReason }: VerifyUser
             where: { id: userId },
             data: updateData,
         })
-        
-        // Create appropriate success message based on status
-        let message = "";
-        switch(status) {
-            case "verified":
-                message = `${userName} has been verified successfully`;
-                break;
-            case "rejected":
-                message = `${userName}'s verification has been rejected`;
-                break;
-            case "pending":
-                message = `${userName}'s verification status set to pending`;
-                break;
+
+        // Create notification for the user about their verification status
+        try {
+            const notificationData = {
+                userId: userId,
+                title: status === "verified" ? "Verification Approved" : "Verification Rejected",
+                message: status === "verified" 
+                    ? "Your account has been verified. You can now access all features."
+                    : `Your verification was rejected. ${rejectionReason ? `Reason: ${rejectionReason}` : ""}`,
+                type: "VERIFICATION",
+                link: status === "verified" ? "/dashboard" : "/verification"
+            };
+            
+            await createNotification(notificationData);
+        } catch (notificationError) {
+            console.error("Error creating verification notification:", notificationError);
+            // Continue even if notification fails
         }
         
-        // Use type assertion for the response
         return {
             success: true,
-            data: {
-                id: updatedUser.id,
-                verificationStatus: updatedUser.verificationStatus,
-                rejectionReason: (updatedUser as any).rejectionReason
-            },
-            message
+            data: updatedUser,
+            message: status === "verified" ? "User verified successfully" : "User verification rejected"
         }
     } catch (error) {
         console.error("Error verifying user:", error)
         return {
             success: false,
-            error: "Failed to update user verification status. Please try again."
+            error: "Failed to verify user"
         }
     }
 }

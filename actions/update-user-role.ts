@@ -38,8 +38,7 @@ export async function updateUserRole({ newRole }: UpdateRoleParams) {
       await client.users.updateUserMetadata(userId, {
         publicMetadata: { role: newRole }
       });
-      console.log(`Updated user role to ${newRole} for user ${userId}`);
-    } catch (error) {
+          } catch (error) {
       console.error('Error updating Clerk metadata:', error);
       // Continue even if Clerk update fails
       return {

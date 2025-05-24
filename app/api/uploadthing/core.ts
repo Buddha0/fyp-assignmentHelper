@@ -11,7 +11,11 @@ export const ourFileRouter = {
     image: { maxFileSize: "4MB", maxFileCount: 5 },
     pdf: { maxFileSize: "8MB", maxFileCount: 3 },
     text: { maxFileSize: "8MB", maxFileCount: 10 },
-  })
+    "application/zip": { maxFileSize: "64MB", maxFileCount: 2 },
+    "application/x-zip-compressed": { maxFileSize: "64MB", maxFileCount: 2 },
+   
+  }as unknown as Parameters<typeof f>[0])
+  
     // Set permissions and file types for this FileRoute
     .middleware(async () => {
       // This code runs on your server before upload
@@ -24,12 +28,8 @@ export const ourFileRouter = {
       // Return userId as metadata, accessible in onUploadComplete
       return { userId };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Upload complete for userId:", metadata.userId);
-      console.log("file url", file.ufsUrl);
-
-      // Return metadata to client-side callback
       return { uploadedBy: metadata.userId };
     }),
 
@@ -38,7 +38,9 @@ export const ourFileRouter = {
     image: { maxFileSize: "4MB", maxFileCount: 5 },
     pdf: { maxFileSize: "8MB", maxFileCount: 3 },
     text: { maxFileSize: "8MB", maxFileCount: 10 },
-  })
+    "application/zip": { maxFileSize: "64MB", maxFileCount: 2 },
+    "application/x-zip-compressed": { maxFileSize: "64MB", maxFileCount: 2 },
+  }as unknown as Parameters<typeof f>[0])
     // Set permissions and file types for this FileRoute
     .middleware(async () => {
       // This code runs on your server before upload
@@ -51,12 +53,8 @@ export const ourFileRouter = {
       // Return userId as metadata, accessible in onUploadComplete
       return { userId };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Upload complete for userId:", metadata.userId);
-      console.log("file url", file.ufsUrl);
-
-      // Return metadata to client-side callback
       return { uploadedBy: metadata.userId };
     }),
 
@@ -64,7 +62,9 @@ export const ourFileRouter = {
     image: { maxFileSize: "4MB", maxFileCount: 5 },
     pdf: { maxFileSize: "8MB", maxFileCount: 3 },
     text: { maxFileSize: "8MB", maxFileCount: 10 },
-  })
+    "application/zip": { maxFileSize: "64MB", maxFileCount: 2 },
+    "application/x-zip-compressed": { maxFileSize: "64MB", maxFileCount: 2 },
+  }as unknown as Parameters<typeof f>[0])
     // Set permissions and file types for this FileRoute
     .middleware(async () => {
       // This code runs on your server before upload
@@ -77,12 +77,8 @@ export const ourFileRouter = {
       // Return userId as metadata, accessible in onUploadComplete
       return { userId };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Upload complete for userId:", metadata.userId);
-      console.log("file url", file.ufsUrl);
-
-      // Return metadata to client-side callback
       return { uploadedBy: metadata.userId };
     }),
 
@@ -90,7 +86,9 @@ export const ourFileRouter = {
     image: { maxFileSize: "4MB", maxFileCount: 5 },
     pdf: { maxFileSize: "8MB", maxFileCount: 3 },
     text: { maxFileSize: "8MB", maxFileCount: 10 },
-  })
+    "application/zip": { maxFileSize: "64MB", maxFileCount: 2 },
+    "application/x-zip-compressed": { maxFileSize: "64MB", maxFileCount: 2 },
+  }as unknown as Parameters<typeof f>[0])
     // Set permissions and file types for this FileRoute
     .middleware(async () => {
       // This code runs on your server before upload
@@ -103,18 +101,16 @@ export const ourFileRouter = {
       // Return userId as metadata, accessible in onUploadComplete
       return { userId };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Upload complete for userId:", metadata.userId);
-      console.log("file url", file.ufsUrl);
-
-      // Return metadata to client-side callback
       return { uploadedBy: metadata.userId };
     }),
   evidence: f({
     image: { maxFileSize: "4MB", maxFileCount: 5 },
     pdf: { maxFileSize: "8MB", maxFileCount: 3 },
     text: { maxFileSize: "8MB", maxFileCount: 10 },
+    
+    
   })
     // Set permissions and file types for this FileRoute
     .middleware(async () => {
@@ -128,12 +124,8 @@ export const ourFileRouter = {
       // Return userId as metadata, accessible in onUploadComplete
       return { userId };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Upload complete for userId:", metadata.userId);
-      console.log("file url", file.ufsUrl);
-
-      // Return metadata to client-side callback
       return { uploadedBy: metadata.userId };
     }),
 
@@ -149,9 +141,6 @@ export const ourFileRouter = {
       return { userId };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Citizenship ID uploaded for userId:", metadata.userId);
-      console.log("file url", file.ufsUrl);
-
       // Return the file URL to be saved in the database
       return {
         uploadedBy: metadata.userId,

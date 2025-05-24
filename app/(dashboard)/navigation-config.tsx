@@ -31,7 +31,8 @@ export const posterNavItems = [
     href: "/poster/verification",
     label: "Verification",
     icon: ShieldCheck,
-  }
+  },
+ 
 ];
 
 // Navigation items for Doer role
@@ -75,7 +76,8 @@ export const doerNavItems = [
     href: "/doer/verification",
     label: "Verification",
     icon: ShieldCheck,
-  }
+  },
+
 ]; 
 
 export const adminNavItems = [
@@ -103,5 +105,6 @@ export const adminNavItems = [
     href: "/dashboard/admin/disputes",
     label: "Disputes",
     icon: Gavel,
-  }
+  },
+  
 ];

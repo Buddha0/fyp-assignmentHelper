@@ -35,8 +35,7 @@ export async function getDoerEarningsSummary(userId: string): Promise<EarningsSu
     }
   });
 
-  // Calculate totals
-  const totalEarnings = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  // Calculate totals for each category
   const pendingEarnings = payments
     .filter(payment => payment.status === PaymentStatus.PENDING)
     .reduce((sum, payment) => sum + payment.amount, 0);
@@ -48,6 +47,10 @@ export async function getDoerEarningsSummary(userId: string): Promise<EarningsSu
   const completedEarnings = payments
     .filter(payment => payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.RELEASED)
     .reduce((sum, payment) => sum + payment.amount, 0);
+
+  // Total earnings should be the sum of completed earnings only
+  // We don't count pending or disputed as "earned" until they're completed
+  const totalEarnings = completedEarnings;
 
   return {
     totalEarnings,
@@ -92,6 +95,8 @@ export async function getDoerEarningsDetails(userId: string): Promise<EarningDet
     taskId: payment.assignment.id,
     taskStatus: payment.assignment.status,
     createdAt: payment.createdAt,
-    completedAt: payment.status === PaymentStatus.COMPLETED ? payment.updatedAt : null
+    // Include completedAt date for both COMPLETED and RELEASED statuses
+    completedAt: (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.RELEASED) 
+      ? payment.updatedAt : null
   }));
 } 

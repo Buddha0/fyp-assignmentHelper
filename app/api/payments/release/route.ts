@@ -99,8 +99,7 @@ export async function POST(req: NextRequest) {
     // 3. Generate payment receipts/invoices
     
     // For demo/academic purposes, we'll just log this
-    console.log(`Payment ${paymentId} released for task ${taskId}. Amount: ${task.payment.amount} credited to doer: ${task.doerId}`);
-
+    
     return NextResponse.json({
       success: true,
       message: 'Payment released successfully',

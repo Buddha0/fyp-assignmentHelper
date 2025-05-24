@@ -9,14 +9,12 @@ const SECRET_KEY = '8gBm/:&EnhH.1/q';
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('Payment success callback received');
-    
+        
     // Get the data parameter from URL
     const url = new URL(req.url);
     const data = url.searchParams.get('data');
     
-    console.log('Data parameter received:', data ? 'yes' : 'no');
-    
+        
     if (!data) {
       console.error('Missing data parameter in success callback');
       return NextResponse.json({ error: 'Missing data parameter' }, { status: 400 });
@@ -29,8 +27,7 @@ export async function GET(req: NextRequest) {
     try {
       decodedData = Buffer.from(data, 'base64').toString();
       responseData = JSON.parse(decodedData);
-      console.log('Decoded eSewa response:', responseData);
-    } catch (decodeError) {
+          } catch (decodeError) {
       console.error('Error decoding data:', decodeError);
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
@@ -44,12 +41,10 @@ export async function GET(req: NextRequest) {
       signature
     } = responseData;
 
-    console.log('eSewa payment response:', { transaction_uuid, status, reference_id });
-    
+        
     // Validate the signature
     if (signed_field_names && signature) {
-      console.log('Validating signature...');
-      const fields = signed_field_names.split(',');
+            const fields = signed_field_names.split(',');
       const signatureString = fields
         .map(field => `${field}=${responseData[field]}`)
         .join(',');
@@ -64,14 +59,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
       }
       
-      console.log('Signature validation successful');
-    } else {
+          } else {
       console.warn('No signature to validate in response');
     }
     
     // Find the payment record
-    console.log('Finding payment record with transaction UUID:', transaction_uuid);
-    const payment = await prisma.payment.findFirst({
+        const payment = await prisma.payment.findFirst({
       where: {
         esewaTransactionUuid: transaction_uuid
       },
@@ -91,16 +84,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
     }
     
-    console.log('Payment found:', payment.id);
-    
+        
     // Verify payment status
     if (status !== 'COMPLETE') {
       console.error('Payment not completed, status:', status);
       return NextResponse.json({ error: 'Payment not completed' }, { status: 400 });
     }
     
-    console.log('Payment status is COMPLETE, updating records...');
-    
+        
     // Update payment status and store verification data
     await prisma.payment.update({
       where: { id: payment.id },
@@ -111,8 +102,7 @@ export async function GET(req: NextRequest) {
       }
     });
     
-    console.log('Payment record updated');
-    
+        
     // Update the assignment status to ASSIGNED
     await prisma.assignment.update({
       where: { id: payment.assignmentId },
@@ -123,8 +113,7 @@ export async function GET(req: NextRequest) {
       }
     });
     
-    console.log('Assignment status updated to ASSIGNED');
-    
+        
     // Find the accepted bid
     const acceptedBid = await prisma.bid.findFirst({
       where: { 
@@ -147,14 +136,12 @@ export async function GET(req: NextRequest) {
         data: { status: 'accepted' }
       });
       
-      console.log('Bid status updated to accepted');
-    }
+          }
     
     // Send notification to the doer that their bid was accepted
     try {
       if (payment.receiverId) {
-        console.log("Creating notification for doer:", payment.receiverId);
-        
+                
         const notificationResult = await createNotification({
           userId: payment.receiverId,
           title: "Bid Accepted!",
@@ -164,8 +151,7 @@ export async function GET(req: NextRequest) {
         });
         
         if (notificationResult.success) {
-          console.log("Notification created successfully:", notificationResult.data.id);
-        } else {
+                  } else {
           console.error("Failed to create notification:", notificationResult.error);
         }
       }
@@ -184,8 +170,7 @@ export async function GET(req: NextRequest) {
       data: { status: 'rejected' }
     });
     
-    console.log('Other bids rejected');
-    
+        
     // Send notifications to rejected bidders
     try {
       const rejectedBids = await prisma.bid.findMany({
@@ -220,19 +205,18 @@ export async function GET(req: NextRequest) {
     }
     
     // Get the app URL for redirect
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fyp-assignment-helper-rfkt.vercel.app';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ;
     
     // Redirect to a success page
     const redirectUrl = `${appUrl}/poster/tasks/${payment.assignmentId}?payment=success`;
-    console.log('Redirecting to:', redirectUrl);
-    
+        
     return NextResponse.redirect(redirectUrl);
     
   } catch (error) {
     console.error('Error processing payment success:', error);
     
     // Get the app URL for redirect
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fyp-assignment-helper-rfkt.vercel.app';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     
     // Redirect to a general error page
     return NextResponse.redirect(`${appUrl}/payment-error?reason=${encodeURIComponent('An error occurred while processing payment')}`);

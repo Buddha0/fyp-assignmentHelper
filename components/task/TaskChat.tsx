@@ -33,7 +33,7 @@ export default function TaskChat({
           setUnreadCount(response.data);
         }
       } catch (error) {
-        console.error("Failed to load unread count:", error);
+       console.error(error);
       }
     };
     

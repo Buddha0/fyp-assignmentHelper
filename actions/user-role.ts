@@ -80,4 +80,19 @@ export async function switchUserRole(newRole: string) {
       error: "Failed to switch your role. Please try again."
     }
   }
+}
+
+// Check if user is an admin
+export async function isAdmin(userId: string): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
+    
+    return user?.role === "ADMIN";
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false; // Default to false in case of error
+  }
 } 

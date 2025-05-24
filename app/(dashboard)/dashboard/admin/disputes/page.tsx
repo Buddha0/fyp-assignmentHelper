@@ -55,15 +55,13 @@ export default function DisputesPage() {
         setLoading(true)
         setError(null)
         
-        console.log(`Fetching disputes (force mode: ${forceMode})...`)
+      
         const result = await getAllDisputes(forceMode)
         
         if (result.success && result.data) {
-          console.log("Disputes fetched successfully:", result.data)
-          
+                    
           if (result.data.length === 0) {
-            console.log("Warning: No disputes returned from the database")
-          }
+                      }
           
           setDisputes(result.data)
         } else {
@@ -92,8 +90,7 @@ export default function DisputesPage() {
       if (result.success) {
         setDebugData(result.data);
         setShowDebug(true);
-        console.log("Debug data:", result.data);
-      } else {
+              } else {
         toast.error("Debug failed: " + result.error);
       }
     } catch (error) {
@@ -119,8 +116,7 @@ export default function DisputesPage() {
       
       if (result.success) {
         toast.success("Dispute data fixed. Reloading...");
-        console.log("Fix results:", result);
-        
+                
         // Reload the disputes data
         setTimeout(() => {
           window.location.reload();

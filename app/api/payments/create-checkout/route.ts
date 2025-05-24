@@ -14,8 +14,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    console.log('Checkout request body:', body);
-
+    
     const { taskId, bidId } = body;
 
     if (!taskId || !bidId) {
@@ -87,8 +86,7 @@ export async function POST(req: Request) {
         receiverId: bid.userId,
       },
     });
-    console.log('Payment record created', { paymentId: payment.id });
-
+    
     return NextResponse.json({ success: true, paymentId: payment.id });
   } catch (error) {
     console.error('Error creating checkout session:', error);

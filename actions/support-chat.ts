@@ -274,8 +274,7 @@ export async function getAllSupportChats() {
         };
       }
       
-      console.log("getAllSupportChats: Retrieving all support chat sessions");
-      
+            
       // Get all support chat sessions
       const sessions = await prisma.supportChatSession.findMany({
         orderBy: {
@@ -309,11 +308,9 @@ export async function getAllSupportChats() {
         }
       });
       
-      console.log(`getAllSupportChats: Found ${sessions.length} total sessions`);
-      
+            
       if (sessions.length === 0) {
-        console.log("getAllSupportChats: No support chat sessions found");
-      }
+              }
       
       // Add a field for unread count
       const sessionsWithUnreadCount = await Promise.all(
@@ -334,8 +331,7 @@ export async function getAllSupportChats() {
             }
           });
           
-          console.log(`Session ${session.id} has ${unreadCount} unread messages`);
-          
+                    
           return {
             ...session,
             unreadCount
@@ -596,8 +592,7 @@ export async function getUnreadSupportMessageCount() {
     const userId = await getUserId();
     
     if (!userId) {
-      console.log("getUnreadSupportMessageCount: User not authenticated");
-      return {
+            return {
         success: false,
         error: "User not authenticated"
       };
@@ -614,8 +609,7 @@ export async function getUnreadSupportMessageCount() {
     });
     
     if (!user) {
-      console.log("getUnreadSupportMessageCount: User not found");
-      return {
+            return {
         success: false,
         error: "User not found"
       };
@@ -625,8 +619,7 @@ export async function getUnreadSupportMessageCount() {
     
     if (user.role === "ADMIN") {
       // For admin, count all unread messages from users across all sessions
-      console.log("getUnreadSupportMessageCount: Counting all unread messages for admin");
-      
+            
       // First, get all sessions
       const sessions = await prisma.supportChatSession.findMany({
         select: {
@@ -634,8 +627,7 @@ export async function getUnreadSupportMessageCount() {
         }
       });
       
-      console.log(`getUnreadSupportMessageCount: Found ${sessions.length} total sessions`);
-      
+            
       // Then count unread messages in all sessions
       if (sessions.length > 0) {
         const result = await prisma.supportMessage.count({
@@ -654,11 +646,9 @@ export async function getUnreadSupportMessageCount() {
         unreadCount = result;
       }
       
-      console.log(`getUnreadSupportMessageCount: Admin has ${unreadCount} total unread messages`);
-    } else {
+          } else {
       // For regular users, count unread messages from admin in their chat
-      console.log("getUnreadSupportMessageCount: Counting unread messages for regular user");
-      
+            
       const userSession = await prisma.supportChatSession.findFirst({
         where: {
           userId: userId,
@@ -680,10 +670,8 @@ export async function getUnreadSupportMessageCount() {
           }
         });
         unreadCount = result;
-        console.log(`getUnreadSupportMessageCount: User has ${unreadCount} unread messages`);
-      } else {
-        console.log("getUnreadSupportMessageCount: No active session found for user");
-      }
+              } else {
+              }
     }
     
     return {

@@ -13,6 +13,52 @@ export async function createNotification(data: {
   link?: string;
 }) {
   try {
+    // If userId is "admin", send to all admin users
+    if (data.userId === "admin") {
+      const adminUsers = await prisma.user.findMany({
+        where: {
+          role: "ADMIN"
+        },
+        select: {
+          id: true
+        }
+      });
+
+      // Create notifications for all admin users
+      const notifications = await Promise.all(
+        adminUsers.map(admin =>
+          prisma.notification.create({
+            data: {
+              userId: admin.id,
+              title: data.title,
+              message: data.message,
+              isRead: false,
+              link: data.link,
+              type: data.type,
+              createdAt: new Date()
+            }
+          })
+        )
+      );
+
+      // Send real-time notifications to all admin users
+      await Promise.all(
+        adminUsers.map(admin =>
+          pusherServer.trigger(
+            getUserChannel(admin.id),
+            EVENT_TYPES.NEW_NOTIFICATION,
+            notifications.find(n => n.userId === admin.id)
+          )
+        )
+      );
+
+      return {
+        success: true,
+        data: notifications
+      };
+    }
+
+    // Regular notification for a single user
     const notification = await prisma.notification.create({
       data: {
         userId: data.userId,

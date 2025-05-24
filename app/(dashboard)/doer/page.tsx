@@ -238,8 +238,7 @@ export default function DoerDashboard() {
           
           // Debug and set recentBid if it exists
           if (activitySummaryData?.recentBid) {
-            console.log("Recent bid data:", activitySummaryData.recentBid);
-            
+                        
             // Create bid with required fields and fallbacks for any missing properties
             mappedActivitySummary.recentBid = {
               id: activitySummaryData.recentBid.id,
@@ -385,21 +384,18 @@ export default function DoerDashboard() {
                 value={userStats.activeTasks}
                 description="Tasks currently in progress"
                 icon={Clock}
-                trend={{ value: 0, isPositive: true }}
               />
               <StatsCard
                 title="Completed Tasks"
                 value={userStats.completedTasks}
                 description="Successfully completed tasks"
                 icon={CheckCircle}
-                trend={{ value: 0, isPositive: true }}
               />
               <StatsCard
                 title="Total Earnings"
                 value={`Rs ${userStats.totalEarnings.toFixed(2)}`}
                 description="Money earned from completed tasks"
                 icon={DollarSign}
-                trend={{ value: 0, isPositive: true }}
               />
               <StatsCard 
                 title="Messages" 

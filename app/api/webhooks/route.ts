@@ -54,8 +54,7 @@ export async function POST(req: Request) {
       if (eventType === 'user.created') {
         // Set default role in Clerk metadata
         await client.users.updateUserMetadata(userId, { publicMetadata: { role: 'DOER' } });
-        console.log(`Assigned default role 'DOER' to user with ID ${userId}`);
-
+        
         // Create user in database
         await prisma.user.create({
           data: {
@@ -67,8 +66,7 @@ export async function POST(req: Request) {
           },
         });
 
-        console.log(`User created in database with ID ${userId}`);
-      } else if (eventType === 'user.updated') {
+              } else if (eventType === 'user.updated') {
         const clerkUser = await client.users.getUser(userId);
         
         // Get role from metadata and map to the Prisma Role
@@ -92,8 +90,7 @@ export async function POST(req: Request) {
           },
         });
 
-        console.log(`User updated in database with ID ${userId} and role ${role}`);
-      }
+              }
     } catch (error) {
       console.error('Error processing user:', error);
       return new Response('Error: Could not process user', { status: 500 });

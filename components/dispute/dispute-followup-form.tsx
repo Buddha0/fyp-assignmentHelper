@@ -30,14 +30,7 @@ export function DisputeFollowupForm({ disputeId }: DisputeFollowupFormProps) {
   const [deletingFile, setDeletingFile] = useState<number | null>(null)
   const router = useRouter()
 
-  // Define file upload permissions and constraints
-  // const permittedFileInfo = {
-  //   config: {
-  //     maxSize: 10, // 10MB maximum file size
-  //     maxFileCount: 5, // Maximum 5 files allowed
-  //     acceptedTypes: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.zip']
-  //   }
-  // }
+
 
   // Initialize the useUploadThing hook
   const { startUpload } = useUploadThing("imageUploader", {
@@ -65,9 +58,8 @@ export function DisputeFollowupForm({ disputeId }: DisputeFollowupFormProps) {
       // Store the progress as a single number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
-    onUploadBegin: (fileName) => {
-      console.log(`Upload started for ${fileName}`);
-    },
+    onUploadBegin: () => {
+          },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
   })

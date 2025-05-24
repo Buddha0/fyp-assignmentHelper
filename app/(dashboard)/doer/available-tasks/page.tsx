@@ -8,7 +8,6 @@ import { TaskCard } from "@/components/task-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
 import { useUser } from "@clerk/nextjs"
 import { Loader2, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -26,6 +25,7 @@ interface Task {
   bidsCount: number
   createdAt: Date
   attachments?: any // This can be an array of URLs or attachment objects
+  userHasBid: boolean
 }
 
 export default function AvailableTasks() {
@@ -39,7 +39,7 @@ export default function AvailableTasks() {
   // Filter states
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("all")
-  const [budgetRange, setBudgetRange] = useState([500])
+  const [budgetRange, setBudgetRange] = useState("all")
   const [deadline, setDeadline] = useState("any")
   const [sortBy, setSortBy] = useState("newest")
   
@@ -66,8 +66,18 @@ export default function AvailableTasks() {
     }
     
     // Apply budget filter
-    if (budgetRange[0] < 500) { // Only filter if not at max
-      result = result.filter(task => task.budget <= budgetRange[0]);
+    if (budgetRange !== "all") {
+      switch (budgetRange) {
+        case "0-1000":
+          result = result.filter(task => task.budget >= 0 && task.budget <= 1000);
+          break;
+        case "1000-5000":
+          result = result.filter(task => task.budget > 1000 && task.budget <= 5000);
+          break;
+        case "5000+":
+          result = result.filter(task => task.budget > 5000);
+          break;
+      }
     }
     
     // Apply deadline filter
@@ -157,8 +167,7 @@ export default function AvailableTasks() {
       return;
     }
     
-    console.log("Opening bid dialog for task:", taskId);
-    setSelectedTaskId(taskId);
+        setSelectedTaskId(taskId);
     setBidDialogOpen(true);
   };
 
@@ -170,13 +179,9 @@ export default function AvailableTasks() {
     }
     
     // Debug the task ID
-    console.log("Task ID in handleViewTaskDetails:", taskId);
-    console.log("Task ID type:", typeof taskId);
-    console.log("Task ID length:", taskId.length);
-    console.log("Task ID characters:", [...taskId].map(c => `${c} (${c.charCodeAt(0)})`).join(', '));
+               
     
-    console.log("Navigating to task details:", taskId);
-    router.push(`/doer/tasks/${taskId}`);
+        router.push(`/doer/tasks/${taskId}`);
     toast.info("Viewing task details", {
       description: `Task ID: ${taskId}`
     });
@@ -190,11 +195,7 @@ export default function AvailableTasks() {
       }
       
       // Log detailed information
-      console.log("User ID:", user.id);
-      console.log("Task ID:", bidData.taskId);
-      console.log("Bid content length:", bidData.bidContent?.length || 0);
-      console.log("Bid amount:", bidData.bidAmount);
-      
+                              
       if (!bidData.bidContent?.trim()) {
         toast.error("Please provide details for your bid");
         return;
@@ -205,11 +206,9 @@ export default function AvailableTasks() {
         return;
       }
       
-      console.log("Submitting bid with data:", bidData);
-      
+            
       const result = await submitBid(user.id, bidData.taskId, bidData.bidContent, bidData.bidAmount);
-      console.log("Bid submission result:", result);
-      
+            
       if (!result || !result.success) {
         const errorMessage = result?.error || "Failed to submit bid";
         throw new Error(errorMessage);
@@ -219,7 +218,6 @@ export default function AvailableTasks() {
       setBidDialogOpen(false);
     } catch (error) {
       console.error("Error submitting bid:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to place bid");
       throw error; // Re-throw to let the dialog component handle it
     }
   };
@@ -231,82 +229,88 @@ export default function AvailableTasks() {
           <h1 className="text-3xl font-bold tracking-tight">Available Tasks</h1>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-4 w-full">
-          <div className="md:col-span-1">
-            <div className="sticky top-20 space-y-6 rounded-lg border p-4">
-              <div>
-                <h3 className="mb-2 font-medium">Search</h3>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="search" 
-                    placeholder="Search tasks..." 
-                    className="pl-8" 
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-medium">Categories</h3>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="essay">Essay Writing</SelectItem>
-                    <SelectItem value="research">Research Paper</SelectItem>
-                    <SelectItem value="programming">Programming</SelectItem>
-                    <SelectItem value="math">Mathematics</SelectItem>
-                    <SelectItem value="science">Science</SelectItem>
-                    <SelectItem value="data">Data Analysis</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-medium">Budget Range</h3>
-                <div className="space-y-4">
-                  <Slider value={budgetRange} max={500} step={10} onValueChange={setBudgetRange} />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Rs.0</span>
-                    <span className="text-sm">Rs.{budgetRange[0]}</span>
-                    <span className="text-sm">Rs.500+</span>
+        {/* Filters Section - Top for screens < 1400px, side for larger screens */}
+        <div className="grid gap-6 2xl:grid-cols-4 w-full">
+          <div className="2xl:col-span-1 order-1 2xl:order-1">
+            <div className="2xl:sticky 2xl:top-20 space-y-6 rounded-lg border p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-1 gap-4">
+                <div>
+                  <h3 className="mb-2 font-medium">Search</h3>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      type="search" 
+                      placeholder="Search tasks..." 
+                      className="pl-8" 
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
                   </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className="mb-2 font-medium">Deadline</h3>
-                <Select value={deadline} onValueChange={setDeadline}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Any Deadline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Any Deadline</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">This Week</SelectItem>
-                    <SelectItem value="month">This Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <h3 className="mb-2 font-medium">Categories</h3>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="essay">Essay Writing</SelectItem>
+                      <SelectItem value="research">Research Paper</SelectItem>
+                      <SelectItem value="programming">Programming</SelectItem>
+                      <SelectItem value="math">Mathematics</SelectItem>
+                      <SelectItem value="science">Science</SelectItem>
+                      <SelectItem value="data">Data Analysis</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <h3 className="mb-2 font-medium">Sort By</h3>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Newest First" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="budget-high">Budget: High to Low</SelectItem>
-                    <SelectItem value="budget-low">Budget: Low to High</SelectItem>
-                    <SelectItem value="deadline">Deadline: Soonest First</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div>
+                  <h3 className="mb-2 font-medium">Budget Range</h3>
+                  <Select value={budgetRange} onValueChange={setBudgetRange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All Budgets" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Budgets</SelectItem>
+                      <SelectItem value="0-1000">Rs.0 - Rs.1000</SelectItem>
+                      <SelectItem value="1000-5000">Rs.1000 - Rs.5000</SelectItem>
+                      <SelectItem value="5000+">Rs.5000+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-medium">Deadline</h3>
+                  <Select value={deadline} onValueChange={setDeadline}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Any Deadline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Deadline</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">This Week</SelectItem>
+                      <SelectItem value="month">This Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-medium">Sort By</h3>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Newest First" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                      <SelectItem value="oldest">Oldest First</SelectItem>
+                      <SelectItem value="budget-high">Budget: High to Low</SelectItem>
+                      <SelectItem value="budget-low">Budget: Low to High</SelectItem>
+                      <SelectItem value="deadline">Deadline: Soonest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <Button 
@@ -324,7 +328,8 @@ export default function AvailableTasks() {
             </div>
           </div>
 
-          <div className="md:col-span-3">
+          {/* Tasks Grid - Full width for screens < 1400px, 3 columns for larger screens */}
+          <div className="2xl:col-span-3 order-2 2xl:order-2">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
@@ -332,7 +337,6 @@ export default function AvailableTasks() {
               </div>
             ) : filteredTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-            
                 <h3 className="mb-2 text-xl font-medium">No Tasks Found</h3>
                 <p className="text-muted-foreground">
                   {loading
@@ -341,7 +345,7 @@ export default function AvailableTasks() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredTasks.map((task) => (
                   <TaskCard
                     key={task.id}
@@ -356,6 +360,7 @@ export default function AvailableTasks() {
                     posterName="Client"
                     viewType="doer"
                     attachments={task.attachments}
+                    userHasBid={task.userHasBid}
                     onPlaceBid={() => handleOpenBidDialog(task.id)}
                     onViewDetails={() => handleViewTaskDetails(task.id)}
                   />

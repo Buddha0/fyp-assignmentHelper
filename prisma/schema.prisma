@@ -149,7 +149,6 @@ model Submission {
   content     String  @db.Text
   attachments Json?
   status      String  @default("pending") // pending, approved, rejected
-  feedback    String? @db.Text
 
   // Relationships
   assignmentId String

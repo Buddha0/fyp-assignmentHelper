@@ -82,8 +82,7 @@ export function SupportChatPanel() {
     // Setup real-time updates
     const channel = pusherClient.subscribe(getUserChannel(user.id));
     channel.bind(EVENT_TYPES.NEW_SUPPORT_MESSAGE, (newMessage: SupportMessage) => {
-      console.log("New message received via Pusher:", newMessage);
-      setMessages(prev => [...prev, newMessage]);
+            setMessages(prev => [...prev, newMessage]);
       
       // Mark new message as read immediately if the chat is open
       if (newMessage.id && !newMessage.isFromUser) {

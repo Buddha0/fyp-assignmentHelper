@@ -45,8 +45,7 @@ export function DisputeResponseForm({ disputeId, assignmentTitle }: DisputeRespo
       setIsUploading(true)
     },
     onUploadProgress: (progress) => {
-      console.log("Upload progress:", progress)
-      // Store the progress as a number value
+            // Store the progress as a number value
       setUploadProgress(typeof progress === 'number' ? progress : 0)
     },
     onUploadError: (error) => {

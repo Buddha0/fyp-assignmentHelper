@@ -249,7 +249,7 @@ export async function sendMessage(
         // If it's already a JSON string, keep it as is
         JSON.parse(fileUrl);
         fileData = { fileUrls: fileUrl };
-      } catch (e) {
+      } catch (error) {
         // Not valid JSON, create a new structure
         fileData = {
           fileUrls: JSON.stringify([{ 
@@ -258,6 +258,7 @@ export async function sendMessage(
             type: fileType || "application/octet-stream"
           }])
         };
+     console.error("Invalid file URL format:", error);
       }
     }
 

@@ -24,6 +24,7 @@ export interface TaskCardProps {
   onPlaceBid?: () => void
   onViewDetails?: () => void
   attachments?: any
+  userHasBid?: boolean
 }
 
 export function TaskCard({
@@ -42,6 +43,7 @@ export function TaskCard({
   onPlaceBid,
   onViewDetails,
   attachments,
+  userHasBid = false,
 }: TaskCardProps) {
   const router = useRouter()
   
@@ -71,8 +73,7 @@ export function TaskCard({
   const handleViewDetails = () => {
     // If a custom handler is provided, use it
     if (onViewDetails) {
-      console.log("Using custom onViewDetails handler for task ID:", id);
-      onViewDetails();
+            onViewDetails();
       return;
     }
     
@@ -84,22 +85,16 @@ export function TaskCard({
       return;
     }
     
-    // Debug the task ID
-    console.log("Task ID in handleViewDetails:", id);
-    console.log("Task ID type:", typeof id);
-    console.log("Task ID length:", id.length);
-    console.log("Task ID characters:", [...id].map(c => `${c} (${c.charCodeAt(0)})`).join(', '));
+   
     
-    console.log("Viewing task details for task:", id, "viewType:", viewType);
-    
+        
     const route = viewType === "poster" 
       ? `/poster/tasks/${id}` 
       : viewType === "doer" 
         ? `/doer/tasks/${id}` 
         : `/admin/tasks/${id}`;
     
-    console.log("Navigating to route:", route);
-    router.push(route);
+        router.push(route);
     
     const viewAction = viewType === "poster" 
       ? "Viewing your task details" 
@@ -133,7 +128,12 @@ export function TaskCard({
               <FileText className="h-3 w-3" /> {category}
             </CardDescription>
           </div>
-          <Badge className={statusColors[status] + " text-white"}>{statusLabels[status]}</Badge>
+          <div className="flex flex-col items-end gap-1">
+            <Badge className={statusColors[status] + " text-white"}>{statusLabels[status]}</Badge>
+            {userHasBid && (
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Bid Already Placed</Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pb-2">

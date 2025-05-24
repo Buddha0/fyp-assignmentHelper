@@ -10,6 +10,7 @@ import Image from "next/image"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { useUploadThing } from "@/lib/uploadthing"
+import { createNotification } from "@/actions/notifications"
 
 // Define interfaces for the verification result data
 interface VerificationData {
@@ -34,6 +35,7 @@ export function VerificationCard() {
   const [result, setResult] = useState<VerificationResult | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number>(0)
+
   
   // Initialize uploadThing hook for direct file uploads
   const { startUpload } = useUploadThing("citizenshipUploader", {
@@ -52,13 +54,11 @@ export function VerificationCard() {
       setUploadProgress(0); // Reset progress on error
     },
     onUploadProgress: (progress) => {
-      console.log("Upload progress:", progress);
-      // Store the progress as a single number value
+            // Store the progress as a single number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
-    onUploadBegin: (fileName) => {
-      console.log(`Upload started for ${fileName}`);
-      setIsUploading(true);
+    onUploadBegin: () => {
+            setIsUploading(true);
     },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
@@ -119,6 +119,20 @@ export function VerificationCard() {
       // Fetch updated status to get all documents after all uploads complete
       await fetchVerificationStatus()
       
+      // Create notification for admin about new verification request
+      try {
+        await createNotification({
+          userId: "admin", // This will be sent to all admins
+          title: "New Verification Request",
+          message: `${user.fullName || "A user"} has submitted verification documents for review.`,
+          type: "VERIFICATION",
+          link: "/dashboard/admin/verification"
+        });
+      } catch (notificationError) {
+        console.error("Error creating verification notification:", notificationError);
+        // Continue even if notification fails
+      }
+      
     } catch (error: unknown) {
       console.error("Error handling upload:", error)
       toast.error("An error occurred while uploading images")
@@ -132,8 +146,7 @@ export function VerificationCard() {
       setUploadProgress(10); // Initial progress
       
       try {
-        console.log("Starting file upload");
-        const files = Array.from(e.target.files);
+                const files = Array.from(e.target.files);
         
         // Upload the files using uploadThing
         setUploadProgress(30);

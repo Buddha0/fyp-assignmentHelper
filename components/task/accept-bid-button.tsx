@@ -24,7 +24,6 @@ interface AcceptBidButtonProps {
 
 export function AcceptBidButton({
   bidId,
-  taskId,
   doerName,
   amount,
   onSuccess,
@@ -36,7 +35,7 @@ export function AcceptBidButton({
     setIsLoading(true);
     
     try {
-      const result = await acceptBid(bidId, taskId);
+      const result = await acceptBid(bidId);
       
       if (result.success) {
         toast.success(`You've successfully accepted ${doerName}'s bid`);

@@ -85,10 +85,8 @@ export function SupportChatButton() {
     
     const checkUnreadMessages = async () => {
       try {
-        console.log("Checking unread support messages");
-        const result = await getUnreadSupportMessageCount();
-        console.log("Unread message count result:", result);
-        
+                const result = await getUnreadSupportMessageCount();
+                
         if (result.success) {
           setUnreadCount(result.data);
         } else {
@@ -103,9 +101,8 @@ export function SupportChatButton() {
     
     // Listen for new messages
     const channel = pusherClient.subscribe(getUserChannel(user.id));
-    channel.bind(EVENT_TYPES.NEW_SUPPORT_MESSAGE, (data) => {
-      console.log("Received new support message notification:", data);
-      if (!isOpen) {
+    channel.bind(EVENT_TYPES.NEW_SUPPORT_MESSAGE, () => {
+            if (!isOpen) {
         setUnreadCount(prev => prev + 1);
       }
     });

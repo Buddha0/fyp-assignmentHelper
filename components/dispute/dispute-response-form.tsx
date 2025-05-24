@@ -35,7 +35,7 @@ export function DisputeResponseForm({ disputeId, assignmentTitle }: DisputeRespo
     config: {
       maxSize: 10, // 10MB maximum file size
       maxFileCount: 5, // Maximum 5 files allowed
-      acceptedTypes: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.zip']
+      acceptedTypes: ['.pdf',  '.jpg', '.jpeg', '.png', '.zip']
     }
   }
 
@@ -65,9 +65,8 @@ export function DisputeResponseForm({ disputeId, assignmentTitle }: DisputeRespo
       // Store the progress as a single number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
-    onUploadBegin: (fileName) => {
-      console.log(`Upload started for ${fileName}`);
-    },
+    onUploadBegin: () => {
+          },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
   })

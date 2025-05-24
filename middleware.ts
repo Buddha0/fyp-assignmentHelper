@@ -1,9 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+
 const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 const isPublicRoute = createRouteMatcher(["/", "/api/webhooks(.*)"]);
-const isApiAuthRoute = createRouteMatcher(["/api/auth(.*)","/api/uploadthing(.*)"]);
+const isApiAuthRoute = createRouteMatcher([
+  "/api/auth(.*)",
+  "/api/uploadthing(.*)"
+]);
 
 // Role-specific route matchers
 const isDoerRoute = createRouteMatcher(["/doer(.*)"]);
@@ -18,6 +22,8 @@ type UserMetadata = {
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
 
+  if(isAuthRoute(req)) return null;
+
   // 🚀 Handle API authentication routes first
   if (isApiAuthRoute(req)) return null;
 
@@ -26,8 +32,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // 🚀 If user is not logged in, redirect to sign in
   if (!userId) {
-    console.log("Redirecting to Sign In due to missing userId");
-    return redirectToSignIn();
+        return redirectToSignIn();
   }
   
   // Get user role from session claims

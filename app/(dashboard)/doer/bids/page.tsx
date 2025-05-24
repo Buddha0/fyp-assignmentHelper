@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { useUser } from "@clerk/nextjs"
 import { Clock, Loader2, Search } from "lucide-react"
 import Link from "next/link"
@@ -301,12 +302,9 @@ interface BidCardProps {
 function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
   const { user } = useUser();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   
   const handleWithdraw = async () => {
-    if (!confirm("Are you sure you want to withdraw this bid? This action cannot be undone.")) {
-      return;
-    }
-    
     if (!user?.id) {
       toast.error("You must be logged in to withdraw a bid");
       return;
@@ -329,93 +327,108 @@ function BidCard({ bid, formatDate, getStatusBadge }: BidCardProps) {
       toast.error("Failed to withdraw bid");
     } finally {
       setIsWithdrawing(false);
+      setConfirmDialogOpen(false);
     }
   };
   
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-semibold text-lg">
-                <Link href={`/doer/tasks/${bid.task.id}`} className="hover:underline">
-                  {bid.task.title}
-                </Link>
-              </h3>
-              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                {bid.task.description}
-              </p>
+    <>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-lg">
+                  <Link href={`/doer/tasks/${bid.task.id}`} className="hover:underline">
+                    {bid.task.title}
+                  </Link>
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                  {bid.task.description}
+                </p>
+              </div>
+              <div>{getStatusBadge(bid.status)}</div>
             </div>
-            <div>{getStatusBadge(bid.status)}</div>
-          </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Category</p>
-              <p>{bid.task.category}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Category</p>
+                <p>{bid.task.category}</p>
+              </div>
+              <div>
+                <p className="font-medium">Task Budget</p>
+                <p>Rs {bid.task.budget.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="font-medium">Your Bid</p>
+                <p>Rs {bid.bidAmount.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Deadline</p>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <p>{formatDate(bid.task.deadline)}</p>
+                </div>
+              </div>
             </div>
+
             <div>
-              <p className="font-medium">Task Budget</p>
-              <p>Rs {bid.task.budget.toFixed(2)}</p>
+              <p className="text-muted-foreground text-sm">Poster</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={bid.task.poster.image || undefined} />
+                  <AvatarFallback>{bid.task.poster.name?.[0] || "U"}</AvatarFallback>
+                </Avatar>
+                <p className="text-sm">{bid.task.poster.name || "Unknown User"}</p>
+              </div>
             </div>
+
             <div>
-              <p className="font-medium">Your Bid</p>
-              <p>Rs {bid.bidAmount.toFixed(2)}</p>
+              <p className="text-muted-foreground text-sm">Your Proposal</p>
+              <p className="text-sm mt-1 line-clamp-2">{bid.bidDescription}</p>
             </div>
-            <div>
-              <p className="text-muted-foreground">Deadline</p>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <p>{formatDate(bid.task.deadline)}</p>
+
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <p>Submitted on {formatDate(bid.createdAt)}</p>
+              <div className="flex gap-2">
+                {bid.status === "pending" && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => setConfirmDialogOpen(true)}
+                    disabled={isWithdrawing}
+                  >
+                    {isWithdrawing ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        Withdrawing...
+                      </>
+                    ) : (
+                      "Withdraw Bid"
+                    )}
+                  </Button>
+                )}
+                <Button variant="default" size="sm" asChild>
+                  <Link href={`/doer/tasks/${bid.task.id}`}>View Details</Link>
+                </Button>
               </div>
             </div>
           </div>
-
-          <div>
-            <p className="text-muted-foreground text-sm">Poster</p>
-            <div className="flex items-center gap-2 mt-1">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={bid.task.poster.image || undefined} />
-                <AvatarFallback>{bid.task.poster.name?.[0] || "U"}</AvatarFallback>
-              </Avatar>
-              <p className="text-sm">{bid.task.poster.name || "Unknown User"}</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-muted-foreground text-sm">Your Proposal</p>
-            <p className="text-sm mt-1 line-clamp-2">{bid.bidDescription}</p>
-          </div>
-
-          <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <p>Submitted on {formatDate(bid.createdAt)}</p>
-            <div className="flex gap-2">
-              {bid.status === "pending" && (
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={handleWithdraw}
-                  disabled={isWithdrawing}
-                >
-                  {isWithdrawing ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      Withdrawing...
-                    </>
-                  ) : (
-                    "Withdraw Bid"
-                  )}
-                </Button>
-              )}
-              <Button variant="default" size="sm" asChild>
-                <Link href={`/doer/tasks/${bid.task.id}`}>View Details</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        title="Withdraw Bid"
+        description="Are you sure you want to withdraw this bid? This action cannot be undone and you'll need to place a new bid if you change your mind."
+        actionLabel="Withdraw Bid"
+        cancelLabel="Cancel"
+        variant="destructive"
+        isLoading={isWithdrawing}
+        onConfirm={handleWithdraw}
+      />
+    </>
   );
 }
 

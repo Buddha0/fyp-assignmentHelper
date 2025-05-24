@@ -1,5 +1,6 @@
 "use client"
 
+import { createDisputeWithAuth } from "@/actions/disputes"
 import { deleteTask, getTaskDetails, rejectBid } from "@/actions/utility/task-utility"
 import { posterNavItems } from "@/app/(dashboard)/navigation-config"
 import ChatInterface from "@/components/chat/ChatInterface"
@@ -25,12 +26,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { EVENT_TYPES, getTaskChannel, pusherClient } from '@/lib/pusher'
 import { useUploadThing } from "@/lib/uploadthing"
 import { useUser } from "@clerk/nextjs"
-import { AlertCircle, Archive, Calendar, CheckCircle2, CreditCard, DollarSign, Download, FileSpreadsheet, FileText, Image, ListChecks, Loader2, MessageSquare, Music, Paperclip, Pencil, Star, Trash2, Video, X } from "lucide-react"
+import { AlertCircle, Archive, Calendar, CheckCircle2, CreditCard, Download, FileSpreadsheet, FileText, Image, ListChecks, Loader2, MessageSquare, Music, Paperclip, Pencil, Star, Trash2, Video, X } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { createDisputeWithAuth } from "@/actions/disputes"
 
 interface DoerInfo {
   id: string
@@ -139,6 +139,8 @@ export default function TaskDetails() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showEditWarningDialog, setShowEditWarningDialog] = useState(false)
+  const [showRejectConfirmation, setShowRejectConfirmation] = useState(false)
+  const [bidToReject, setBidToReject] = useState<string | null>(null)
 
   // Initialize the useUploadThing hook
   const { startUpload } = useUploadThing("evidence", {
@@ -162,13 +164,11 @@ export default function TaskDetails() {
       setUploadProgress(0); // Reset progress on error
     },
     onUploadProgress: (progress) => {
-      console.log("Upload progress:", progress);
-      // Store the progress as a single number value
+            // Store the progress as a single number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
     onUploadBegin: () => {
-      console.log("Upload started");
-    },
+          },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
   })
@@ -182,8 +182,7 @@ export default function TaskDetails() {
     
     // Handle new bid
     const handleNewBid = (data: any) => {
-      console.log('New bid received:', data)
-      setTask(prevTask => {
+            setTask(prevTask => {
         if (!prevTask) return null
         
         // Check if the bid already exists (to avoid duplicates)
@@ -212,11 +211,6 @@ export default function TaskDetails() {
         }
       })
       
-      // Show notification
-      toast.info('New bid received', {
-        description: `A new bid has been placed on your task by ${data.bid.user.name}`
-      })
-      
       // If we're not on the bids tab, show a hint
       if (activeTab !== 'bids') {
         toast.info('Switch to the "Bids" tab to view all bids', { duration: 3000 })
@@ -238,30 +232,72 @@ export default function TaskDetails() {
     if (!params.id) return;
     
     const taskId = params.id as string;
-    console.log("Setting up Pusher subscription for task updates:", taskId);
-    
+        
     // Subscribe to the task channel
     const channel = pusherClient.subscribe(getTaskChannel(taskId));
     
     // Listen for task update events
     channel.bind(EVENT_TYPES.TASK_UPDATED, (data: any) => {
-      console.log("Task update received:", data);
-      
+            
       if (data.task && data.task.id === taskId) {
         // Update the task state with the updated task data
         setTask(prevTask => {
           if (!prevTask) return null;
           
+          // Create an updated task object with the new status
+          // Convert from uppercase format (UNDER_REVIEW) to the format used in this component
+          const updatedStatus = data.task.status || prevTask.status;
+          
+          // For submissions that change status from IN_PROGRESS to UNDER_REVIEW
+          if (data.submission && updatedStatus === "UNDER_REVIEW") {
+            // Add the new submission to the submissions array
+            const newSubmission: Submission = {
+              id: data.submission.id,
+              content: "New submission received",
+              status: data.submission.status || "pending",
+              createdAt: new Date(data.submission.createdAt),
+              user: prevTask.doerInfo || {
+                id: "",
+                name: "Doer",
+                image: null,
+                rating: null
+              },
+              attachments: []
+            };
+            
+            return {
+              ...prevTask,
+              status: updatedStatus,
+              submissions: [newSubmission, ...prevTask.submissions]
+            };
+          }
+          
           return {
             ...prevTask,
-            ...data.task,
-            status: data.task.status || prevTask.status
+            status: updatedStatus
           };
         });
         
-        // Show a toast notification about the status change if it changed
-        if (data.task.status && task?.status !== data.task.status) {
-          toast.info(`Task status updated to ${data.task.status}`);
+        // Show a toast notification about the status change if it's a meaningful update
+        const statusMessages = {
+          "IN_PROGRESS": "The doer has started working on this task",
+          "UNDER_REVIEW": "The doer has submitted work for review",
+          "COMPLETED": "This task has been completed"
+        };
+        
+        if (data.task.status && statusMessages[data.task.status]) {
+          toast.info(statusMessages[data.task.status], {
+            description: "Refresh the page to see all updated details",
+            action: {
+              label: "Refresh",
+              onClick: () => window.location.reload()
+            }
+          });
+          
+          // If we're not already on the details tab, suggest switching tabs
+          if (activeTab !== "details") {
+            toast.info(`Switch to the "Details" tab to see the updated status`, { duration: 3000 });
+          }
         }
       }
     });
@@ -271,7 +307,7 @@ export default function TaskDetails() {
       channel.unbind(EVENT_TYPES.TASK_UPDATED);
       pusherClient.unsubscribe(getTaskChannel(taskId));
     };
-  }, [params.id, task?.status]);
+  }, [params.id, activeTab]);
 
   useEffect(() => {
     async function loadTaskDetails() {
@@ -332,13 +368,16 @@ export default function TaskDetails() {
   const handleRejectBid = async (bidId: string) => {
     if (!user?.id) return;
 
-    if (!confirm("Are you sure you want to reject this bid?")) {
-      return;
-    }
+    setBidToReject(bidId);
+    setShowRejectConfirmation(true);
+  };
 
-    setProcessingBid(bidId);
+  const confirmRejectBid = async () => {
+    if (!user?.id || !bidToReject) return;
+
+    setProcessingBid(bidToReject);
     try {
-      const result = await rejectBid(bidId, user.id);
+      const result = await rejectBid(bidToReject, user.id);
 
       if (result.success) {
         toast.success(result.message || "Bid rejected successfully");
@@ -355,6 +394,8 @@ export default function TaskDetails() {
       toast.error("An error occurred while rejecting this bid");
     } finally {
       setProcessingBid(null);
+      setShowRejectConfirmation(false);
+      setBidToReject(null);
     }
   };
 
@@ -791,12 +832,12 @@ export default function TaskDetails() {
                             <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-md">
                               <div>
                                 <h4 className="text-xs font-medium text-muted-foreground mb-1">Your Original Budget</h4>
-                                <p className="text-base font-medium">${task.budget.toFixed(2)}</p>
+                                <p className="text-base font-medium">Rs.{task.budget.toFixed(2)}</p>
                               </div>
                               <div>
                                 <h4 className="text-xs font-medium text-muted-foreground mb-1">Doer Proposed Bid</h4>
                                 <p className={`text-base font-medium ${bid.bidAmount <= task.budget ? "text-green-600" : "text-red-600"}`}>
-                                  ${bid.bidAmount.toFixed(2)}
+                                  Rs.{bid.bidAmount.toFixed(2)}
                                   {bid.bidAmount <= task.budget ?
                                     <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Within budget</span> :
                                     <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Above budget</span>}
@@ -1293,7 +1334,7 @@ export default function TaskDetails() {
                               Upload any relevant files as evidence (max 5 files, 10MB each)
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Allowed files: .pdf, .doc, .docx, .jpg, .jpeg, .png, .zip
+                              Allowed files: .pdf,  .jpg, .jpeg, .png, .zip
                             </p>
                             
                             {disputeEvidence.length > 0 && (
@@ -1385,7 +1426,7 @@ export default function TaskDetails() {
                   <div className="space-y-3 bg-white rounded-md p-3 border border-green-200 mb-4">
                     <div className="flex justify-between items-center">
                       <p className="text-sm font-medium text-green-800">Payment Amount</p>
-                      <p className="font-medium text-green-900">${task.payment.amount?.toFixed(2) || task.budget.toFixed(2)}</p>
+                      <p className="font-medium text-green-900">Rs.{task.payment.amount?.toFixed(2) || task.budget.toFixed(2)}</p>
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-sm font-medium text-green-800">Status</p>
@@ -1421,8 +1462,8 @@ export default function TaskDetails() {
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium text-muted-foreground">Budget</p>
                   <div className="flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                    <span className="font-medium">${task.budget.toFixed(2)}</span>
+                   
+                    <span className="font-medium">Rs.{task.budget.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
@@ -1517,13 +1558,13 @@ export default function TaskDetails() {
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Average Bid</span>
                       <span className="font-medium">
-                        ${(task.bids.reduce((sum, bid) => sum + bid.bidAmount, 0) / task.bids.length).toFixed(2)}
+                        Rs.{(task.bids.reduce((sum, bid) => sum + bid.bidAmount, 0) / task.bids.length).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Lowest Bid</span>
                       <span className="font-medium text-green-600">
-                        ${Math.min(...task.bids.map(bid => bid.bidAmount)).toFixed(2)}
+                        Rs.{Math.min(...task.bids.map(bid => bid.bidAmount)).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -1559,39 +1600,79 @@ export default function TaskDetails() {
                 Confirm Payment Release
               </h3>
             </div>
-            <div className="px-6 py-4">
-              <p className="mb-4">
-                Are you sure you want to release the payment of <span className="font-semibold">${task.payment.amount?.toFixed(2) || task.budget.toFixed(2)}</span> to the doer?
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to release the payment of Rs.{task.payment.amount.toFixed(2)} to the doer?
+                This action cannot be undone.
               </p>
-              <div className="bg-amber-50 p-3 rounded-md border border-amber-100 mb-4">
-                <p className="text-amber-800 text-sm flex items-start">
-                  <AlertCircle className="h-4 w-4 mr-2 mt-0.5 text-amber-600" />
-                  This action cannot be undone. The funds will be transferred immediately and the task will be marked as completed.
-                </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReleaseConfirmation(false)}
+                  disabled={isReleasingPayment}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handlePaymentRelease}
+                  disabled={isReleasingPayment}
+                >
+                  {isReleasingPayment ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Releasing...
+                    </>
+                  ) : (
+                    "Release Payment"
+                  )}
+                </Button>
               </div>
             </div>
-            <div className="bg-gray-50 px-6 py-3 flex justify-end gap-3 border-t">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowReleaseConfirmation(false)}
-                disabled={isReleasingPayment}
-              >
-                Cancel
-              </Button>
-              <Button 
-                className="bg-green-600 hover:bg-green-700"
-                onClick={handlePaymentRelease}
-                disabled={isReleasingPayment}
-              >
-                {isReleasingPayment ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Release"
-                )}
-              </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Bid Rejection Confirmation Modal */}
+      {showRejectConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4 overflow-hidden shadow-xl">
+            <div className="bg-red-50 px-6 py-4 border-b border-red-100">
+              <h3 className="text-lg font-semibold text-red-800 flex items-center">
+                <X className="h-5 w-5 mr-2 text-red-600" />
+                Confirm Bid Rejection
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to reject this bid? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowRejectConfirmation(false);
+                    setBidToReject(null);
+                  }}
+                  disabled={processingBid === bidToReject}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmRejectBid}
+                  disabled={processingBid === bidToReject}
+                >
+                  {processingBid === bidToReject ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    "Reject Bid"
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

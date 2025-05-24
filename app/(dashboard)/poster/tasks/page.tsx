@@ -117,18 +117,22 @@ export default function PosterTasks() {
       taskChannels.push({ taskId: task.id, channel });
       
       // Handle new bid events
-      channel.bind(EVENT_TYPES.NEW_BID, (data: any) => {
-        console.log(`New bid received for task ${task.id}:`, data);
-        // Refresh task list when a new bid is received
-        loadTasks();
+      channel.bind(EVENT_TYPES.NEW_BID, (data) => {
+        // Update the task's bid count
+        setTasks(prevTasks => 
+          prevTasks.map(t => 
+            t.id === data.task.id ? {
+              ...t,
+              bidsCount: (t.bidsCount || 0) + 1
+            } : t
+          )
+        );
       });
     });
     
     // Listen for general notifications
     userNotificationChannel.bind(EVENT_TYPES.NEW_NOTIFICATION, (data: any) => {
-      console.log("New notification received:", data);
       if (data.type === 'new_bid') {
-        console.log("Refreshing tasks due to new bid notification");
         loadTasks();
       }
     });

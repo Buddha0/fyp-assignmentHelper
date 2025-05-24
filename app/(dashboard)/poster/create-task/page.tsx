@@ -7,14 +7,13 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePicker } from "@/components/ui/date-picker"
+import { FileUpload } from "@/components/ui/file-upload"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-// Removed the UploadButton import since we're using a custom implementation
-import { useUploadThing } from "@/lib/uploadthing"
 import { useUser } from "@clerk/nextjs"
-import { FilePlus, Home, ListChecks, Loader2, Paperclip, ShieldCheck, X } from "lucide-react"
+import { FilePlus, Home, ListChecks, Loader2, ShieldCheck } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -50,7 +49,6 @@ function CreateTaskForm() {
     const [description, setDescription] = useState("")
     const [category, setCategory] = useState("")
     const [budget, setBudget] = useState("")
-    const [uploadProgress, setUploadProgress] = useState<number>(0)
     const [priority, setPriority] = useState("")
     
     // Define file upload permissions and constraints
@@ -58,7 +56,7 @@ function CreateTaskForm() {
         config: {
             maxSize: 10, // 10MB maximum file size
             maxFileCount: 5, // Maximum 5 files allowed
-            acceptedTypes: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.zip']
+            acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.zip']
         }
     }
     
@@ -81,46 +79,10 @@ function CreateTaskForm() {
     const router = useRouter()
     const { user } = useUser()
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [deletingFile, setDeletingFile] = useState<number | null>(null)
     const [isEditMode, setIsEditMode] = useState(false)
     const [taskId, setTaskId] = useState("")
     const [isLoading, setIsLoading] = useState(false)
-    const [isUploading, setIsUploading] = useState(false)
-    
-    // Initialize the useUploadThing hook
-    const { startUpload } = useUploadThing("imageUploader", {
-        onClientUploadComplete: (res) => {
-            if (!res) return;
-            
-            const newFiles = res.map((file) => ({
-                name: file.name,
-                size: file.size,
-                url: file.url,
-                key: file.key
-            }));
-            
-            setAttachments(prev => [...prev, ...newFiles]);
-            setIsUploading(false);
-            setUploadProgress(0); // Reset progress
-            toast.success("Files uploaded successfully!");
-        },
-        onUploadError: (error) => {
-            toast.error(error.message || "Failed to upload file");
-            setIsUploading(false);
-            setUploadProgress(0); // Reset progress on error
-        },
-        onUploadProgress: (progress) => {
-            console.log("Upload progress:", progress);
-            // Store the progress as a single number value
-            setUploadProgress(typeof progress === 'number' ? progress : 0);
-        },
-        onUploadBegin: (fileName) => {
-            console.log(`Upload started for ${fileName}`);
-        },
-        // Set to 'all' to get frequent progress updates
-        uploadProgressGranularity: 'all',
-    })
-    
+
     const searchParams = useSearchParams()
     const editId = searchParams.get('edit')
 
@@ -171,7 +133,6 @@ function CreateTaskForm() {
 
     const handleRemoveFile = async (index: number) => {
         const fileToRemove = attachments[index]
-        setDeletingFile(index)
         
         try {
             const result = await deleteFile(fileToRemove.key)
@@ -185,8 +146,6 @@ function CreateTaskForm() {
         } catch (error) {
             console.error('Error deleting file:', error)
             toast.error('Failed to delete file. Please try again.')
-        } finally {
-            setDeletingFile(null)
         }
     }
 
@@ -251,7 +210,7 @@ function CreateTaskForm() {
                     attachments: formattedAttachments,
                     posterId: user.id
                 }
-
+                
                 result = await createTask(formData)
                 
                 if (!result.success) {
@@ -260,12 +219,12 @@ function CreateTaskForm() {
                 
                 toast.success("Task created successfully!")
             }
-
-            router.push("/poster/tasks")
-            router.refresh()
-        } catch (error: any) {
-            console.error(`Error ${isEditMode ? 'updating' : 'creating'} task:`, error)
-            toast.error(error.message || `Failed to ${isEditMode ? 'update' : 'create'} task`)
+            
+            // Redirect to tasks page
+            router.push('/poster/tasks')
+        } catch (error) {
+            console.error('Error submitting form:', error)
+            toast.error(error instanceof Error ? error.message : 'Failed to save task')
         } finally {
             setIsSubmitting(false)
         }
@@ -367,13 +326,23 @@ function CreateTaskForm() {
                                     <Label htmlFor="budget">Budget (Rs)</Label>
                                     <Input 
                                         type="number" 
+                                        min="0"
+                                        step="0.01"
                                         value={budget} 
                                         onChange={(e) => {
-                                            setBudget(e.target.value);
-                                            if (e.target.value) setValidationErrors(prev => ({...prev, budget: false}));
-                                        }} 
+                                            const value = e.target.value;
+                                            // Only allow non-negative numbers
+                                            if (parseFloat(value) >= 0 || value === "") {
+                                                setBudget(value);
+                                                if (value) setValidationErrors(prev => ({...prev, budget: false}));
+                                            }
+                                        }}
+                                        onWheel={(e) => e.currentTarget.blur()}
                                         className={validationErrors.budget ? "border-red-500" : ""}
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        Enter the budget for the task which you want to pay to the doer
+                                    </p>
                                 </div>
                             </div>
 
@@ -423,109 +392,22 @@ function CreateTaskForm() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="attachments">Attachments</Label>
-                                <div className="flex items-center gap-2">
-                                    {/* Custom file upload implementation */}
-                                    <div className="flex flex-col gap-2">
-                                        <input
-                                            type="file"
-                                            id="file-upload"
-                                            className="hidden"
-                                            multiple
-                                            onChange={(e) => {
-                                                // Get files from input
-                                                const files = e.target.files;
-                                                if (files && files.length > 0) {
-                                                    // Convert FileList to array for startUpload
-                                                    const fileArray = Array.from(files);
-                                                    setIsUploading(true);
-                                                    // Start the upload
-                                                    startUpload(fileArray);
-                                                }
-                                            }}
-                                        />
-                                        <button 
-                                            type="button"
-                                            onClick={() => document.getElementById('file-upload')?.click()}
-                                            disabled={isUploading || isSubmitting}
-                                            className="bg-[#171717] text-white p-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                        >
-                                            {isUploading ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Paperclip className="h-4 w-4" />
-                                            )}
-                                            <span>
-                                                {isUploading 
-                                                    ? uploadProgress > 0
-                                                        ? `Uploading (${Math.floor(uploadProgress)}%)`
-                                                        : 'Uploading...'
-                                                    : 'Choose Files'}
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                {/* Display upload progress */}
-                                {isUploading && uploadProgress > 0 && (
-                                    <div className="mt-2 space-y-2">
-                                        <div className="w-full space-y-1">
-                                            <div className="flex justify-between text-xs">
-                                                <span>Upload Progress</span>
-                                                <span>{Math.floor(uploadProgress)}%</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                                                <div 
-                                                    className="h-full bg-black" 
-                                                    style={{ width: `${uploadProgress}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                <p className="text-xs text-muted-foreground">
-                                    Upload any relevant files or resources {permittedFileInfo?.config ? 
-                                        `(${permittedFileInfo.config.maxSize} MB max` + 
-                                        `${permittedFileInfo.config.maxFileCount ? `, ${permittedFileInfo.config.maxFileCount} files max` : ""})` : 
-                                        "(max 5 files, 10MB each)"}
-                                </p>
-                                {permittedFileInfo?.config?.acceptedTypes && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Allowed files: {permittedFileInfo.config.acceptedTypes.join(", ")}
-                                    </p>
-                                )}
-
-                                {/* Display uploaded files */}
-                                {attachments.length > 0 && (
-                                    <div className="mt-4 space-y-2">
-                                        {attachments.map((file, index) => (
-                                            <div
-                                                key={index}
-                                                className="flex items-center justify-between p-2 pr-4 border rounded-lg bg-muted/30"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <Paperclip className="w-4 h-4 text-muted-foreground" />
-                                                    <span className="text-sm font-medium">{file.name}</span>
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {file.size ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : ''}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveFile(index)}
-                                                    disabled={deletingFile === index}
-                                                    className="text-muted-foreground hover:text-destructive focus:outline-none"
-                                                >
-                                                    {deletingFile === index ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <X className="w-4 h-4" />
-                                                    )}
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                <FileUpload
+                                    endpoint="imageUploader"
+                                    maxFiles={permittedFileInfo.config.maxFileCount}
+                                    maxSize={permittedFileInfo.config.maxSize}
+                                    acceptedTypes={permittedFileInfo.config.acceptedTypes}
+                                    onUploadComplete={(newFiles) => {
+                                        setAttachments(prev => [...prev, ...newFiles.map(file => ({
+                                            ...file,
+                                            size: 0,
+                                            key: file.url.split('/').pop() || ''
+                                        }))])
+                                    }}
+                                    existingFiles={attachments}
+                                    onFileRemove={handleRemoveFile}
+                                    helperText="Upload any relevant files or resources"
+                                />
                             </div>
 
                             <div className="flex justify-end gap-2">

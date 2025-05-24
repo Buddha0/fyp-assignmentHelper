@@ -60,8 +60,7 @@ export async function getUserTasks(userId: string) {
 
 export async function getTaskDetails(taskId: string, userId: string) {
     try {
-        console.log(`Fetching task details for taskId=${taskId}, userId=${userId}`);
-        
+                
         if (!taskId || !userId) {
             return {
                 success: false,
@@ -139,18 +138,7 @@ export async function getTaskDetails(taskId: string, userId: string) {
             }
         }
 
-        // Log raw submissions data to help with debugging
-        console.log("Raw submissions data:", JSON.stringify(task.submissions.map(s => ({
-            id: s.id,
-            content: s.content,
-            hasAttachments: !!s.attachments,
-            attachmentsType: s.attachments ? typeof s.attachments : 'none',
-            attachmentsIsArray: s.attachments ? Array.isArray(s.attachments) : false,
-            attachmentsPreview: s.attachments ? 
-                (typeof s.attachments === 'string' ? s.attachments.substring(0, 100) : 
-                 Array.isArray(s.attachments) ? `Array with ${s.attachments.length} items` : 
-                 JSON.stringify(s.attachments).substring(0, 100)) : 'none'
-        })), null, 2));
+      
 
         // Process submissions to ensure attachments are properly formatted
         const processedSubmissions = task.submissions.map(sub => {
@@ -217,8 +205,7 @@ export async function getTaskDetails(taskId: string, userId: string) {
                 }
             }
             
-            console.log(`Processed attachments for submission ${sub.id}:`, attachments);
-            
+                        
             return {
                 id: sub.id,
                 content: sub.content,
@@ -387,8 +374,7 @@ export async function updateTask(
 }
 
 export async function submitBid(userId: string, taskId: string, bidContent: string, bidAmount: number) {
-    console.log(`Submitting bid: User=${userId}, Task=${taskId}, Amount=${bidAmount}`);
-    
+        
     if (!userId || !taskId) {
         console.error("Missing required fields:", { userId, taskId });
         return {
@@ -429,8 +415,7 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
         });
 
         if (!task) {
-            console.log("Task not found or not open:", taskId);
-            return {
+                        return {
                 success: false,
                 error: "Task not found or is no longer accepting bids"
             };
@@ -453,15 +438,13 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
         });
 
         if (existingBid) {
-            console.log("User already bid on this task:", userId, taskId);
-            return {
+                        return {
                 success: false,
                 error: "You have already placed a bid on this task"
             };
         }
 
-        console.log("Creating bid with content:", bidContent);
-
+        
         // Get the user's name for the notification
         const bidder = await prisma.user.findUnique({
             where: { id: userId },
@@ -494,50 +477,67 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
             }
         });
         
-        console.log("Bid created successfully:", bid.id);
-
+        
         // Send real-time notification to the task poster
         if (task.posterId) {
-            // Send task channel update for UI updates
-            await pusherServer.trigger(
-                getTaskChannel(taskId),
-                EVENT_TYPES.NEW_BID,
-                {
-                    bid: {
-                        id: bid.id,
-                        userId: bid.userId,
-                        content: bid.content,
-                        bidAmount: bid.bidAmount,
-                        createdAt: bid.createdAt,
-                        user: bid.user
-                    },
-                    task: {
-                        id: taskId,
-                        title: task.title
-                    }
-                }
-            );
+            console.log('Sending notification to poster:', task.posterId);
             
             // Create a notification in the database
             try {
-                console.log("Creating notification for poster:", task.posterId);
-                
+                console.log('Creating notification in database');
                 const notificationResult = await createNotification({
                     userId: task.posterId,
                     title: "New Bid Received",
-                    message: `${bidder?.name || 'A Doer'} has placed a bid on your task: ${task.title}`,
+                    message: `${bidder?.name || 'A Doer'} has placed a bid of Rs ${bidAmount} on your task: ${task.title}`,
                     type: "new_bid",
                     link: `/poster/tasks/${taskId}`
                 });
                 
-                if (notificationResult.success) {
-                    console.log("Notification created successfully:", notificationResult.data.id);
+                if (notificationResult.success && notificationResult.data) {
+                    console.log('Notification created successfully:', notificationResult.data);
+                    // Send real-time notification through Pusher with properly formatted data
+                    const notification = Array.isArray(notificationResult.data) 
+                        ? notificationResult.data[0] 
+                        : notificationResult.data;
+
+                    if (notification) {
+                        console.log('Sending Pusher notification with data:', {
+                            channel: getUserChannel(task.posterId),
+                            event: EVENT_TYPES.NEW_NOTIFICATION,
+                            data: {
+                                id: notification.id,
+                                title: notification.title,
+                                message: notification.message,
+                                type: notification.type,
+                                isRead: notification.isRead,
+                                createdAt: notification.createdAt,
+                                linkUrl: notification.link,
+                                sourceId: bid.id,
+                                sourceType: 'bid'
+                            }
+                        });
+                        await pusherServer.trigger(
+                            getUserChannel(task.posterId),
+                            EVENT_TYPES.NEW_NOTIFICATION,
+                            {
+                                id: notification.id,
+                                title: notification.title,
+                                message: notification.message,
+                                type: notification.type,
+                                isRead: notification.isRead,
+                                createdAt: notification.createdAt,
+                                linkUrl: notification.link,
+                                sourceId: bid.id,
+                                sourceType: 'bid'
+                            }
+                        );
+                        console.log('Pusher notification sent successfully');
+                    } else {
+                        console.error('Notification data is null or undefined');
+                    }
                 } else {
                     console.error("Failed to create notification:", notificationResult.error);
                 }
-                
-                // Note: The createNotification function already triggers the Pusher event
-                // so we don't need to do it manually here
             } catch (notificationError) {
                 console.error("Error creating notification:", notificationError);
                 // We don't want to fail the bid creation if notification fails
@@ -572,8 +572,6 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
 
 export async function getAvailableTasks(userId?: string) {
     try {
-        console.log(`Fetching available tasks${userId ? ` for userId=${userId}` : ''}`);
-        
         // Fetch all open tasks
         const tasks = await prisma.assignment.findMany({
             where: {
@@ -594,8 +592,6 @@ export async function getAvailableTasks(userId?: string) {
             }
         });
 
-        console.log(`Found ${tasks.length} available tasks`);
-        
         // Transform data for client
         const transformedTasks = tasks.map(task => {
             const userHasBid = userId ? task.bids.some(bid => bid.userId === userId) : false;
@@ -689,8 +685,7 @@ export async function getUserBids(userId: string) {
             }
         });
 
-        console.log(`Found ${bids.length} bids for user ${userId}`);
-
+        
         // Transform the data for the client
         return {
             success: true,
@@ -780,7 +775,7 @@ export async function withdrawBid(bidId: string, userId: string) {
     }
 }
 
-export async function updateBid(bidId: string, userId: string, content: string, bidAmount: number) {
+export async function updateBid() {
     // Feature has been disabled - return error response
     return {
         success: false,
@@ -891,8 +886,7 @@ export async function acceptBid(bidId: string, userId: string) {
 
         // Send real-time notification to the doer that their bid was accepted
         try {
-            console.log("Creating notification for doer:", bid.userId);
-            
+                        
             const notificationResult = await createNotification({
                 userId: bid.userId,
                 title: "Bid Accepted!",
@@ -902,8 +896,7 @@ export async function acceptBid(bidId: string, userId: string) {
             });
             
             if (notificationResult.success) {
-                console.log("Notification created successfully:", notificationResult.data.id);
-            } else {
+                            } else {
                 console.error("Failed to create notification:", notificationResult.error);
             }
         } catch (notificationError) {
@@ -1002,7 +995,13 @@ export async function rejectBid(bidId: string, userId: string) {
                 id: bidId
             },
             include: {
-                assignment: true
+                assignment: true,
+                user: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
             }
         });
 
@@ -1039,6 +1038,43 @@ export async function rejectBid(bidId: string, userId: string) {
             }
         });
 
+        // Get the poster's name for the notification
+        const poster = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true }
+        });
+
+        // Send notification to the doer
+        try {
+            const notificationResult = await createNotification({
+                userId: bid.userId,
+                title: "Bid Rejected",
+                message: `${poster?.name || 'Client'} has rejected your bid on task: ${bid.assignment.title}`,
+                type: "bid_rejected",
+                link: `/doer/bids`
+            });
+
+            if (!notificationResult.success) {
+                console.error("Failed to create notification:", notificationResult.error);
+            }
+        } catch (notificationError) {
+            console.error("Error creating notification:", notificationError);
+            // We don't want to fail the bid rejection if notification fails
+            // So we just log the error and continue
+        }
+
+        // Send real-time update via Pusher
+        await pusherServer.trigger(
+            getBidChannel(bidId),
+            EVENT_TYPES.BID_REJECTED,
+            {
+                bid: {
+                    id: bidId,
+                    status: "rejected"
+                }
+            }
+        );
+
         return {
             success: true,
             data: updatedBid,
@@ -1055,8 +1091,7 @@ export async function rejectBid(bidId: string, userId: string) {
 
 export async function getDoerTaskDetails(taskId: string, userId: string) {
     try {
-        console.log(`Fetching doer task details for taskId=${taskId}, userId=${userId}`);
-        
+                
         if (!taskId || !userId) {
             console.error("Missing required parameters:", { taskId, userId });
             return {
@@ -1135,18 +1170,7 @@ export async function getDoerTaskDetails(taskId: string, userId: string) {
             }
         }
 
-        // Log raw submissions data to help with debugging
-        console.log("Raw submissions data:", JSON.stringify(task.submissions.map(s => ({
-            id: s.id,
-            content: s.content,
-            hasAttachments: !!s.attachments,
-            attachmentsType: s.attachments ? typeof s.attachments : 'none',
-            attachmentsIsArray: s.attachments ? Array.isArray(s.attachments) : false,
-            attachmentsPreview: s.attachments ? 
-                (typeof s.attachments === 'string' ? s.attachments.substring(0, 100) : 
-                 Array.isArray(s.attachments) ? `Array with ${s.attachments.length} items` : 
-                 JSON.stringify(s.attachments).substring(0, 100)) : 'none'
-        })), null, 2));
+       
 
         // Process submissions to ensure attachments are properly formatted
         const processedSubmissions = task.submissions.map(sub => {
@@ -1213,8 +1237,7 @@ export async function getDoerTaskDetails(taskId: string, userId: string) {
                 }
             }
             
-            console.log(`Processed attachments for submission ${sub.id}:`, attachments);
-            
+                        
             return {
                 id: sub.id,
                 content: sub.content,
@@ -1388,8 +1411,8 @@ export async function createTaskSubmission(
             }
         });
 
-        // Update the task status to UNDER_REVIEW if it's currently IN_PROGRESS
-        if (taskExists.status.toUpperCase() === "IN_PROGRESS") {
+        // Update the task status to UNDER_REVIEW if it's not already completed
+        if (taskExists.status !== "COMPLETED") {
             await prisma.assignment.update({
                 where: { id: taskId },
                 data: { status: "UNDER_REVIEW" }
@@ -1398,7 +1421,7 @@ export async function createTaskSubmission(
 
         // Send real-time notification to the task poster
         if (taskExists.poster?.id) {
-            // Keep task channel update for UI updates
+            // Send more complete task data for UI updates
             await pusherServer.trigger(
                 getTaskChannel(taskId),
                 EVENT_TYPES.TASK_UPDATED,
@@ -1406,7 +1429,8 @@ export async function createTaskSubmission(
                     submission: {
                         id: submission.id,
                         status: submission.status,
-                        createdAt: submission.createdAt
+                        createdAt: submission.createdAt,
+                        content: content.substring(0, 100) // Send a preview of the content
                     },
                     task: {
                         id: taskId,
@@ -1415,6 +1439,32 @@ export async function createTaskSubmission(
                     }
                 }
             );
+            
+            // Create a high-priority notification for the poster
+            try {
+                await createNotification({
+                    userId: taskExists.poster.id,
+                    title: "⚠️ ACTION REQUIRED: Work Submitted for Review",
+                    message: `${taskExists.doer?.name || "A doer"} has submitted their work for your task: "${taskExists.title}". Please review and approve or provide feedback.`,
+                    type: "submission_review_required",
+                    link: `/poster/tasks/${taskId}`
+                });
+                
+                // Send an additional real-time notification highlighting the need for action
+                await pusherServer.trigger(
+                    getUserChannel(taskExists.poster.id),
+                    EVENT_TYPES.URGENT_NOTIFICATION,
+                    {
+                        message: `New work submitted for "${taskExists.title}" is waiting for your review`,
+                        taskId: taskId,
+                        submissionId: submission.id,
+                        timestamp: new Date().toISOString()
+                    }
+                );
+            } catch (error) {
+                console.error("Error creating notification for submission:", error);
+                // Continue even if notification creation fails
+            }
         }
 
         return {
@@ -1437,8 +1487,7 @@ export async function updateTaskStatus(
     newStatus: string
 ) {
     try {
-        console.log(`Updating task status: taskId=${taskId}, userId=${userId}, newStatus=${newStatus}`);
-        
+                
         if (!taskId || !userId) {
             return {
                 success: false,
@@ -1497,7 +1546,7 @@ export async function updateTaskStatus(
 
         // Send real-time notification to the task poster
         if (task.poster?.id) {
-            // Keep task channel update for UI updates
+            // Send more complete data for better real-time updates
             await pusherServer.trigger(
                 getTaskChannel(taskId),
                 EVENT_TYPES.TASK_UPDATED,
@@ -1506,9 +1555,38 @@ export async function updateTaskStatus(
                         id: taskId,
                         title: task.title,
                         status: newStatus
+                    },
+                    updateType: "status_change",
+                    updatedBy: {
+                        id: userId,
+                        name: task.doer?.name || "Doer"
                     }
                 }
             );
+            
+            // Also create a notification for the poster
+            try {
+                const statusMessages = {
+                    "IN_PROGRESS": "has started working on",
+                    "UNDER_REVIEW": "has submitted work for",
+                    "COMPLETED": "has completed"
+                };
+                
+                const message = statusMessages[newStatus] 
+                    ? `${task.doer?.name || "The doer"} ${statusMessages[newStatus]} your task: ${task.title}`
+                    : `Status of task "${task.title}" has been updated to ${newStatus.toLowerCase().replace('_', ' ')}`;
+                
+                await createNotification({
+                    userId: task.poster.id,
+                    title: `Task Status Updated`,
+                    message,
+                    type: "status_update",
+                    link: `/poster/tasks/${taskId}`
+                });
+            } catch (error) {
+                console.error("Error creating notification for status update:", error);
+                // Continue even if notification creation fails
+            }
         }
 
         return {

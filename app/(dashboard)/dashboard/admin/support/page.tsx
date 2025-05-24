@@ -72,13 +72,11 @@ export default function AdminSupportPage() {
       setUploadProgress(0); // Reset progress on error
     },
     onUploadProgress: (progress) => {
-      console.log("Upload progress:", progress);
-      // Store the progress as a single number value
+            // Store the progress as a single number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
-    onUploadBegin: (fileName) => {
-      console.log(`Upload started for ${fileName}`);
-      setIsUploading(true);
+    onUploadBegin: () => {
+            setIsUploading(true);
     },
     // Set to 'all' to get frequent progress updates
     uploadProgressGranularity: 'all',
@@ -105,12 +103,10 @@ export default function AdminSupportPage() {
   // Function for silent refresh - needs to be accessible outside the effect
   const refreshChatsSilently = useCallback(async () => {
     try {
-      console.log("Silently refreshing chat data...");
-      const result = await getAllSupportChats();
+            const result = await getAllSupportChats();
       
       if (result.success && result.data && Array.isArray(result.data)) {
-        console.log("Silent refresh successful, updating data");
-        setChats(result.data);
+                setChats(result.data);
         setFilteredChats(result.data);
         
         // If there's an active chat, refresh it too
@@ -143,28 +139,24 @@ export default function AdminSupportPage() {
       // Set a timeout to prevent infinite loading
       const loadingTimeout = setTimeout(() => {
         if (mounted) {
-          console.log("Loading timeout reached - resetting loading state");
-          setIsLoading(false);
+                    setIsLoading(false);
           setLoadingError("Loading took too long. Please try refreshing.");
         }
       }, 10000); // 10 seconds timeout
       
       try {
-        console.log("Loading all support chats for admin view");
-        setLoadingStage("Fetching support chats...");
+                setLoadingStage("Fetching support chats...");
         setLoadingProgress(30);
         
         const result = await getAllSupportChats();
-        console.log("Support chats response:", result);
-        
+                
         if (!mounted) return;
         
         setLoadingStage("Processing data...");
         setLoadingProgress(70);
         
         if (result.success) {
-          console.log("Support chats loaded:", result.data);
-          setLastRefreshTime(new Date());
+                    setLastRefreshTime(new Date());
           // Only set active chats if we have data
           if (result.data && Array.isArray(result.data)) {
             setChats(result.data);
@@ -217,12 +209,10 @@ export default function AdminSupportPage() {
 
   // Subscribe to pusher channel for admin notifications
   useEffect(() => {
-    console.log("Setting up Pusher subscription for admin-support channel");
-    const channel = pusherClient.subscribe('admin-support');
+        const channel = pusherClient.subscribe('admin-support');
     
     channel.bind(EVENT_TYPES.NEW_SUPPORT_MESSAGE, (data: any) => {
-      console.log("New support message received via Pusher:", data);
-      // Refresh the chat list
+            // Refresh the chat list
       refreshChatsSilently();
       
       // If this message is for the currently active chat, update it
@@ -236,8 +226,7 @@ export default function AdminSupportPage() {
     });
     
     return () => {
-      console.log("Cleaning up Pusher subscription");
-      channel.unbind(EVENT_TYPES.NEW_SUPPORT_MESSAGE);
+            channel.unbind(EVENT_TYPES.NEW_SUPPORT_MESSAGE);
       pusherClient.unsubscribe('admin-support');
     };
   }, [activeChat, refreshChatsSilently]);
@@ -257,18 +246,15 @@ export default function AdminSupportPage() {
     
     // Set a timeout to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
-      console.log("Chat loading timeout reached - resetting loading state");
-      setIsLoading(false);
+            setIsLoading(false);
       toast.error("Loading took too long. Please try again.");
     }, 8000); // 8 seconds timeout
     
     try {
-      console.log("Loading specific chat:", chatId);
-      setLoadingProgress(50);
+            setLoadingProgress(50);
       
       const result = await getSupportChatById(chatId);
-      console.log("Chat load result:", result);
-      setLoadingProgress(80);
+            setLoadingProgress(80);
       
       if (result.success) {
         setActiveChat(result.data);
@@ -297,8 +283,7 @@ export default function AdminSupportPage() {
       setUploadProgress(10); // Initial progress
       
       try {
-        console.log("Starting file upload");
-        const files = Array.from(e.target.files);
+                const files = Array.from(e.target.files);
         
         // Upload the files using uploadThing
         setUploadProgress(30);
@@ -436,8 +421,7 @@ export default function AdminSupportPage() {
                     setSearchQuery("");
                     getAllSupportChats().then(result => {
                       if (result.success) {
-                        console.log("Refreshed chats:", result.data);
-                        setChats(result.data);
+                                                setChats(result.data);
                         setFilteredChats(result.data);
                         setLoadingError(null);
                       }
@@ -464,8 +448,7 @@ export default function AdminSupportPage() {
                     setSearchQuery("");
                     getAllSupportChats().then(result => {
                       if (result.success) {
-                        console.log("Refreshed chats:", result.data);
-                        setChats(result.data);
+                                                setChats(result.data);
                         setFilteredChats(result.data);
                       }
                     });
@@ -761,7 +744,7 @@ export default function AdminSupportPage() {
         onChange={handleFileChange}
         className="hidden"
         multiple
-        accept="image/*,application/pdf,.doc,.docx,.txt"
+        accept="image/*,application/pdf,.txt,zipfiles"
       />
     </DashboardLayout>
   );

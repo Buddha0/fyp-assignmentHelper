@@ -268,8 +268,7 @@ function truncateDescription(description: string): string {
 // Add a new direct function to fetch task by ID without any filtering
 export async function getTaskById(taskId: string) {
     try {
-        console.log("Direct task lookup for ID:", taskId);
-        
+                
         if (!taskId) {
             return {
                 success: false,
@@ -317,10 +316,7 @@ export async function getTaskById(taskId: string) {
 
 // Debug function that verifies the task ID by doing a direct lookup
 export async function debugTaskId(taskId: string) {
-    console.log("Debug task ID function called with:", taskId);
-    console.log("Task ID type:", typeof taskId);
-    console.log("Task ID length:", taskId.length);
-    console.log("Task ID characters:", [...taskId].map(c => `${c} (${c.charCodeAt(0)})`).join(', '));
+               
     
     try {
         // Run a raw SQL query to see if we can match by ID
@@ -330,8 +326,7 @@ export async function debugTaskId(taskId: string) {
             WHERE id = ${taskId}
         `;
         
-        console.log("Raw SQL query results:", rawResults);
-        
+                
         // Also check the standard Prisma query
         const task = await prisma.assignment.findUnique({
             where: {
@@ -343,8 +338,7 @@ export async function debugTaskId(taskId: string) {
             }
         });
         
-        console.log("Prisma query result:", task);
-        
+                
         return {
             success: !!task,
             data: {
@@ -364,8 +358,7 @@ export async function debugTaskId(taskId: string) {
 // Fetch a task by ID directly without any access control - for debugging and fixing the task not found issue
 export async function fetchTaskDirectly(taskId: string) {
     try {
-        console.log("Direct task fetch for ID:", taskId);
-        
+                
         if (!taskId) {
             return {
                 success: false,
@@ -465,8 +458,7 @@ export async function fetchTaskDirectly(taskId: string) {
             } : null
         };
         
-        console.log("Task data prepared successfully:", task.id);
-        
+                
         return {
             success: true,
             data: taskData

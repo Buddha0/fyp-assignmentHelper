@@ -80,8 +80,7 @@ export default function ChatInterface({
         }));
         
         // Log what we're adding to help debug
-        console.log("Files being added:", newFiles);
-        
+                
         setUploadedFiles(prev => [...prev, ...newFiles]);
       }
       setIsUploading(false);
@@ -91,8 +90,7 @@ export default function ChatInterface({
       setIsUploading(true);
     },
     onUploadProgress: (progress) => {
-      console.log("Upload progress:", progress);
-      // Store the progress as a number value
+            // Store the progress as a number value
       setUploadProgress(typeof progress === 'number' ? progress : 0);
     },
     onUploadError: (error) => {
@@ -204,8 +202,7 @@ export default function ChatInterface({
       
       if (hasFiles) {
         // Log the uploaded files for debugging
-        console.log("Sending files:", uploadedFiles);
-        
+                
         // Always store file objects as array for consistency
         fileUrls = JSON.stringify(uploadedFiles);
       }
@@ -236,13 +233,11 @@ export default function ChatInterface({
   const getFileAttachments = (fileUrlsJson: string | undefined): FileAttachment[] => {
     if (!fileUrlsJson) return [];
     
-    console.log("Raw fileUrls data:", fileUrlsJson);
-    
+        
     try {
       // Handle direct URL strings (not JSON)
       if (typeof fileUrlsJson === 'string' && (fileUrlsJson.startsWith('http') || fileUrlsJson.startsWith('/')) && !fileUrlsJson.includes('{')) {
-        console.log("Handling direct URL string");
-        return [{
+                return [{
           url: fileUrlsJson,
           name: fileUrlsJson.split('/').pop() || "Attachment",
           type: "application/octet-stream"
@@ -260,8 +255,7 @@ export default function ChatInterface({
       
       // Handle array of file objects
       if (Array.isArray(fileData)) {
-        console.log("Handling array of file objects");
-        return fileData.map(file => ({
+                return fileData.map(file => ({
           url: file.url || (typeof file === 'string' ? file : ''),
           name: file.name || (file.url ? file.url.split('/').pop() : 'Attachment'),
           type: file.type || 'application/octet-stream'
@@ -270,8 +264,7 @@ export default function ChatInterface({
       
       // Handle single file object
       if (typeof fileData === 'object' && fileData !== null) {
-        console.log("Handling single file object");
-        return [{
+                return [{
           url: fileData.url || '',
           name: fileData.name || (fileData.url ? fileData.url.split('/').pop() : 'Attachment'),
           type: fileData.type || 'application/octet-stream'
@@ -415,11 +408,7 @@ export default function ChatInterface({
                                           e.preventDefault();
                                           
                                           // Log what we're trying to download
-                                          console.log("Downloading file:", { 
-                                            url: file.url, 
-                                            name: displayName 
-                                          });
-                                          
+                                                                                    
                                           // Force download using a direct fetch
                                           fetch(file.url)
                                             .then(response => {

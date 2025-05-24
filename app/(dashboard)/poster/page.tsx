@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { getPosterBids, getPosterStats, getPosterTasks, getTaskActivities } from "./actions"
+import { pusherClient } from "@/lib/pusher-client"
+import { EVENT_TYPES, getTaskChannel } from "@/lib/pusher"
 
 function LoadingCard() {
   return (
@@ -82,6 +84,98 @@ export default function PosterDashboard() {
     }
   }, [user])
 
+  // Set up real-time updates for tasks
+  useEffect(() => {
+    if (!user?.id || tasks.length === 0) return;
+    
+    // Create a map to store task details by id for easy reference
+    const taskMap = tasks.reduce((acc, task) => {
+      acc[task.id] = task;
+      return acc;
+    }, {});
+    
+    // Subscribe to each task's channel
+    const subscriptions = tasks.map(task => {
+      const channel = pusherClient.subscribe(getTaskChannel(task.id));
+      
+      // Handle task updates
+      channel.bind(EVENT_TYPES.TASK_UPDATED, (data) => {
+        // Update local task state
+        setTasks(prevTasks => 
+          prevTasks.map(t => 
+            t.id === data.task.id ? {
+              ...t,
+              status: data.task.status.toLowerCase().replace("_", "-") // Convert to dashboard format
+            } : t
+          )
+        );
+        
+        // Update stats if we get a status change
+        if (data.task.status === "IN_PROGRESS" || data.task.status === "UNDER_REVIEW" || data.task.status === "COMPLETED") {
+          getPosterStats().then(newStats => {
+            setStats(newStats);
+          });
+          
+          // Add new activity
+          const statusMap = {
+            "IN_PROGRESS": "started working on",
+            "UNDER_REVIEW": "submitted work for",
+            "COMPLETED": "completed"
+          };
+          
+          setActivities(prev => [{
+            type: 'status',
+            title: `Doer has ${statusMap[data.task.status] || "updated"} the task`,
+            description: taskMap[data.task.id]?.title || data.task.title,
+            actorName: 'Doer',
+            timestamp: new Date().toISOString()
+          }, ...prev]);
+          
+          // Show toast notification
+          toast.info(
+            `Task status updated to ${data.task.status.toLowerCase().replace("_", " ")}`,
+            {
+              description: `Task "${taskMap[data.task.id]?.title || data.task.title}" has been updated.`
+            }
+          );
+        }
+      });
+
+      // Handle new bids
+      channel.bind(EVENT_TYPES.NEW_BID, (data) => {
+        // Update the task's bid count
+        setTasks(prevTasks => 
+          prevTasks.map(t => 
+            t.id === data.task.id ? {
+              ...t,
+              bidsCount: (t.bidsCount || 0) + 1
+            } : t
+          )
+        );
+
+        // Add new activity
+        setActivities(prev => [{
+          type: 'bid',
+          title: 'New Bid Received',
+          description: `${data.bid.user.name} placed a bid on "${data.task.title}"`,
+          actorName: data.bid.user.name,
+          timestamp: new Date().toISOString()
+        }, ...prev]);
+      });
+      
+      return { taskId: task.id, channel };
+    });
+    
+    // Cleanup function
+    return () => {
+      subscriptions.forEach(sub => {
+        sub.channel.unbind(EVENT_TYPES.TASK_UPDATED);
+        sub.channel.unbind(EVENT_TYPES.NEW_BID);
+        pusherClient.unsubscribe(getTaskChannel(sub.taskId));
+      });
+    };
+  }, [tasks, user?.id]);
+
   // Show welcome toast when component mounts
   const welcomeToastShown = useRef(false);
   useEffect(() => {
@@ -99,8 +193,18 @@ export default function PosterDashboard() {
   }
 
   // Filter tasks by status for the tabs
-  const pendingReviewTasks = tasks.filter(task => task.status === "pending-review") || []
-  const activeTasks = tasks.filter(task => task.status === "in-progress") || []
+  const pendingReviewTasks = tasks.filter(task => 
+    task.status === "under-review" || 
+    task.status === "pending-review" || 
+    task.status === "UNDER_REVIEW"
+  ) || [];
+  
+  const activeTasks = tasks.filter(task => 
+    task.status === "in-progress" || 
+    task.status === "assigned" || 
+    task.status === "IN_PROGRESS" || 
+    task.status === "ASSIGNED"
+  ) || [];
 
   return (
     <DashboardLayout navItems={posterNavItems} userRole="poster" userName={user?.fullName || "Sarah Williams"}>
@@ -141,21 +245,18 @@ export default function PosterDashboard() {
                 value={stats.activeTasks.toString()}
                 description="Tasks currently in progress"
                 icon={Clock}
-                trend={{ value: 0, isPositive: true }}
               />
               <StatsCard
                 title="Completed Tasks"
                 value={stats.completedTasks.toString()}
                 description="Successfully completed tasks"
                 icon={CheckCircle}
-                trend={{ value: 0, isPositive: true }}
               />
               <StatsCard
                 title="Pending Reviews"
                 value={stats.pendingReviews.toString()}
                 description="Tasks awaiting your review"
                 icon={FileText}
-                trend={{ value: 0, isPositive: false }}
               />
               <StatsCard 
                 title="Messages" 

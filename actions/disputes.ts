@@ -5,6 +5,7 @@ import { EVENT_TYPES, getTaskChannel, pusherServer } from "@/lib/pusher";
 import { DisputeStatus } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import { getUserById } from "@/actions/utility/user-utilit";
+import { createNotification } from "@/actions/notifications";
 
 export async function createDisputeWithAuth(
   assignmentId: string,
@@ -168,6 +169,44 @@ export async function createDispute(
     const otherPartyId = initiatorId === assignment.posterId 
       ? assignment.doerId 
       : assignment.posterId;
+
+    // Create notifications for all relevant parties
+    try {
+      // Notify the other party
+      await createNotification({
+        userId: otherPartyId!,
+        title: "⚠️ Dispute Raised",
+        message: `A dispute has been raised for task: "${assignment.title}". Please review and respond.`,
+        type: "DISPUTE",
+        link: `/dashboard/disputes/${dispute.id}`
+      });
+
+      // Notify all admins
+      const adminUsers = await prisma.user.findMany({
+        where: {
+          role: "ADMIN"
+        },
+        select: {
+          id: true
+        }
+      });
+
+      // Create notifications for all admin users
+      await Promise.all(
+        adminUsers.map(admin =>
+          createNotification({
+            userId: admin.id,
+            title: "⚠️ New Dispute Requires Attention",
+            message: `A new dispute has been raised for task: "${assignment.title}". Please review and take action.`,
+            type: "DISPUTE",
+            link: `/dashboard/admin/disputes/${dispute.id}`
+          })
+        )
+      );
+    } catch (notificationError) {
+      console.error("Error creating dispute notifications:", notificationError);
+      // Continue even if notification creation fails
+    }
 
     // Send notification to task channel for real-time updates
     await pusherServer.trigger(
@@ -510,6 +549,32 @@ export async function resolveDispute(
         status: paymentStatus,
       },
     });
+
+    // Create notifications for both parties about the resolution
+    try {
+      // Notify the poster
+      await createNotification({
+        userId: dispute.assignment.poster.id,
+        title: "⚠️ Dispute Resolved",
+        message: `The dispute for task "${dispute.assignment.title}" has been resolved. ${status === "RESOLVED_REFUND" ? "Payment has been refunded to you." : "Payment has been released to the doer."}`,
+        type: "DISPUTE",
+        link: `/dashboard/disputes/${disputeId}`
+      });
+
+      // Notify the doer
+      if (dispute.assignment.doer) {
+        await createNotification({
+          userId: dispute.assignment.doer.id,
+          title: "⚠️ Dispute Resolved",
+          message: `The dispute for task "${dispute.assignment.title}" has been resolved. ${status === "RESOLVED_RELEASE" ? "Payment has been released to you." : "Payment has been refunded to the poster."}`,
+          type: "DISPUTE",
+          link: `/dashboard/disputes/${disputeId}`
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error creating resolution notifications:", notificationError);
+      // Continue even if notification creation fails
+    }
 
     // Send real-time update via Pusher
     await pusherServer.trigger(

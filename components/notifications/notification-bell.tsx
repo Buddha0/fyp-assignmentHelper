@@ -15,20 +15,24 @@ import { formatDistanceToNow } from "date-fns";
 import {
   BellIcon,
   Check,
+  CheckCircle,
   Loader2,
   MessagesSquare,
   ShieldAlert,
-  Wallet
+  Wallet,
+  Users,
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
   title: string;
   message: string;
-  type: "PAYMENT" | "DISPUTE" | "MESSAGE" | "SYSTEM";
+  type: "PAYMENT" | "DISPUTE" | "MESSAGE" | "SYSTEM" | "MESSAGE" | "new_bid" | "submission_review_required" | "VERIFICATION" | string;
   isRead: boolean;
   createdAt: Date;
   linkUrl?: string;
@@ -48,6 +52,8 @@ export function NotificationBell() {
   useEffect(() => {
     if (!user) return;
 
+    setIsLoading(true);
+
     const loadNotifications = async () => {
       try {
         const result = await getAllNotifications();
@@ -57,7 +63,7 @@ export function NotificationBell() {
             id: n.id,
             title: n.title,
             message: n.message,
-            type: n.type as "PAYMENT" | "DISPUTE" | "MESSAGE" | "SYSTEM",
+            type: n.type,
             isRead: n.isRead,
             createdAt: n.createdAt,
             linkUrl: n.link,
@@ -79,17 +85,74 @@ export function NotificationBell() {
 
     // Setup real-time updates
     const channel = pusherClient.subscribe(getUserChannel(user.id));
-    channel.bind(EVENT_TYPES.NEW_NOTIFICATION, (data: Notification) => {
-      console.log("New notification received:", data);
-      setNotifications((prev) => [data, ...prev]);
-      setUnreadCount((prev) => prev + 1);
+    console.log('Subscribed to user channel:', getUserChannel(user.id));
+    
+    // Handle regular notifications
+    channel.bind(EVENT_TYPES.NEW_NOTIFICATION, (data: any) => {
+      console.log('Received new notification:', data);
+      // Convert the notification data to match our component's Notification type
+      const newNotification: Notification = {
+        id: data.id,
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        isRead: data.isRead,
+        createdAt: new Date(data.createdAt),
+        linkUrl: data.link,
+        sourceId: data.sourceId,
+        sourceType: data.sourceType
+      };
+      
+      console.log('Processed notification:', newNotification);
+      
+      // Add the new notification to the beginning of the list, but only if it doesn't already exist
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === newNotification.id)) {
+          // Notification already exists, do not add duplicate or increment count
+          return prev;
+        }
+        // Only increment unread count if adding a new notification
+        setUnreadCount((prevCount) => {
+          console.log('Updating unread count from', prevCount, 'to', prevCount + 1);
+          return prevCount + 1;
+        });
+        return [newNotification, ...prev];
+      });
+      
+      // If it's a submission review notification, automatically open the notifications panel
+      if (data.type === "submission_review_required") {
+        setIsOpen(true);
+        // Use browser notification if supported and if permission is granted
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Action Required: Work Submitted", {
+            body: data.message,
+            icon: "/notification-icon.png" // Add a suitable icon
+          });
+        }
+      }
+    });
+    
+    // Handle urgent notifications
+    channel.bind(EVENT_TYPES.URGENT_NOTIFICATION, (data: any) => {
+      // Show a toast notification for immediate attention using Sonner
+      toast.error("Work Submitted for Review", {
+        description: data.message,
+        duration: 10000, // 10 seconds
+        action: {
+          label: "View Now",
+          onClick: () => router.push(`/poster/tasks/${data.taskId}`)
+        }
+      });
+      
+      // Automatically open the notification dropdown
+      setIsOpen(true);
     });
 
     return () => {
       channel.unbind_all();
       pusherClient.unsubscribe(getUserChannel(user.id));
     };
-  }, [user]);
+  }, [user, router]);
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read in the UI immediately
@@ -125,6 +188,12 @@ export function NotificationBell() {
         return <ShieldAlert className="h-4 w-4 text-red-500" />;
       case "MESSAGE":
         return <MessagesSquare className="h-4 w-4 text-blue-500" />;
+      case "new_bid":
+        return <Users className="h-4 w-4 text-purple-500" />;
+      case "submission_review_required":
+        return <CheckCircle className="h-4 w-4 text-amber-500" />;
+      case "VERIFICATION":
+        return <ShieldCheck className="h-4 w-4 text-blue-500" />;
       default:
         return <BellIcon className="h-4 w-4 text-gray-500" />;
     }
