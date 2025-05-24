@@ -85,11 +85,11 @@ export function NotificationBell() {
 
     // Setup real-time updates
     const channel = pusherClient.subscribe(getUserChannel(user.id));
-    console.log('Subscribed to user channel:', getUserChannel(user.id));
+    
     
     // Handle regular notifications
     channel.bind(EVENT_TYPES.NEW_NOTIFICATION, (data: any) => {
-      console.log('Received new notification:', data);
+      
       // Convert the notification data to match our component's Notification type
       const newNotification: Notification = {
         id: data.id,
@@ -103,7 +103,7 @@ export function NotificationBell() {
         sourceType: data.sourceType
       };
       
-      console.log('Processed notification:', newNotification);
+     
       
       // Add the new notification to the beginning of the list, but only if it doesn't already exist
       setNotifications((prev) => {
@@ -113,7 +113,7 @@ export function NotificationBell() {
         }
         // Only increment unread count if adding a new notification
         setUnreadCount((prevCount) => {
-          console.log('Updating unread count from', prevCount, 'to', prevCount + 1);
+        
           return prevCount + 1;
         });
         return [newNotification, ...prev];

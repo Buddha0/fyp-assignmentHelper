@@ -480,11 +480,11 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
         
         // Send real-time notification to the task poster
         if (task.posterId) {
-            console.log('Sending notification to poster:', task.posterId);
+          
             
             // Create a notification in the database
             try {
-                console.log('Creating notification in database');
+              
                 const notificationResult = await createNotification({
                     userId: task.posterId,
                     title: "New Bid Received",
@@ -494,28 +494,14 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
                 });
                 
                 if (notificationResult.success && notificationResult.data) {
-                    console.log('Notification created successfully:', notificationResult.data);
+                   
                     // Send real-time notification through Pusher with properly formatted data
                     const notification = Array.isArray(notificationResult.data) 
                         ? notificationResult.data[0] 
                         : notificationResult.data;
 
                     if (notification) {
-                        console.log('Sending Pusher notification with data:', {
-                            channel: getUserChannel(task.posterId),
-                            event: EVENT_TYPES.NEW_NOTIFICATION,
-                            data: {
-                                id: notification.id,
-                                title: notification.title,
-                                message: notification.message,
-                                type: notification.type,
-                                isRead: notification.isRead,
-                                createdAt: notification.createdAt,
-                                linkUrl: notification.link,
-                                sourceId: bid.id,
-                                sourceType: 'bid'
-                            }
-                        });
+                        
                         await pusherServer.trigger(
                             getUserChannel(task.posterId),
                             EVENT_TYPES.NEW_NOTIFICATION,
@@ -531,7 +517,7 @@ export async function submitBid(userId: string, taskId: string, bidContent: stri
                                 sourceType: 'bid'
                             }
                         );
-                        console.log('Pusher notification sent successfully');
+                      
                     } else {
                         console.error('Notification data is null or undefined');
                     }

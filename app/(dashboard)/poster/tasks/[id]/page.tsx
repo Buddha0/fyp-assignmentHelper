@@ -287,17 +287,9 @@ export default function TaskDetails() {
         
         if (data.task.status && statusMessages[data.task.status]) {
           toast.info(statusMessages[data.task.status], {
-            description: "Refresh the page to see all updated details",
-            action: {
-              label: "Refresh",
-              onClick: () => window.location.reload()
-            }
+            description: `Task: ${task?.title}`,
+            duration: 5000
           });
-          
-          // If we're not already on the details tab, suggest switching tabs
-          if (activeTab !== "details") {
-            toast.info(`Switch to the "Details" tab to see the updated status`, { duration: 3000 });
-          }
         }
       }
     });

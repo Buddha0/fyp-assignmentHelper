@@ -130,14 +130,6 @@ export default function PosterDashboard() {
             actorName: 'Doer',
             timestamp: new Date().toISOString()
           }, ...prev]);
-          
-          // Show toast notification
-          toast.info(
-            `Task status updated to ${data.task.status.toLowerCase().replace("_", " ")}`,
-            {
-              description: `Task "${taskMap[data.task.id]?.title || data.task.title}" has been updated.`
-            }
-          );
         }
       });
 
